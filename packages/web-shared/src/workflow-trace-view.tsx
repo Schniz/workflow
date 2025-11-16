@@ -1,5 +1,3 @@
-'use client';
-
 import type { Event, Hook, Step, WorkflowRun } from '@workflow/world';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
