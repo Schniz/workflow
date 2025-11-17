@@ -23,7 +23,7 @@ export default async function StepPage({ params }: { params: { id: string } }) {
     ? WORKFLOWS.filter((w) => step.usedInWorkflows?.includes(w.id))
     : [];
 
-  const cliCommand = `pnpm dlx shadcn@latest add ${step.id}`;
+  const cliCommand = `npx shadcn@latest add @workflow/${step.id}`;
   const fileName = `${step.id}.tsx`;
 
   // Related steps from the same integration

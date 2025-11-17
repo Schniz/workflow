@@ -1,0 +1,16 @@
+{
+  "name": "fireworks-ai",
+  "type": "registry:block",
+  "title": "Fireworks AI",
+  "description": "Fast inference for open-source AI models",
+  "registryDependencies": [],
+  "dependencies": ["@vercel/workflow"],
+  "files": [
+    {
+      "path": "registry/steps/fireworks-ai.tsx",
+      "type": "registry:component",
+      "content": "'use workflow';\n\nimport { workflow, fatalError } from '@vercel/workflow';\n\ntype FireworksParams = {\n  messages: { role: string; content: string }[];\n  model?: string;\n};\n\nexport const fireworksAI = workflow(\n  'fireworks-ai',\n  async (params: FireworksParams) => {\n    const apiKey = process.env.FIREWORKS_API_KEY;\n\n    if (!apiKey) {\n      throw fatalError('FIREWORKS_API_KEY is required');\n    }\n\n    const response = await fetch(\n      'https://api.fireworks.ai/inference/v1/chat/completions',\n      {\n        method: 'POST',\n        headers: {\n          'Authorization': \\`Bearer \\${apiKey}\\",
+      "target": "components/steps/fireworks-ai.tsx"
+    }
+  ]
+}

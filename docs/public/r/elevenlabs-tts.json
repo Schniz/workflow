@@ -1,0 +1,16 @@
+{
+  "name": "elevenlabs-tts",
+  "type": "registry:block",
+  "title": "ElevenLabs Text-to-Speech",
+  "description": "Convert text to speech using ElevenLabs AI voices",
+  "registryDependencies": [],
+  "dependencies": ["@vercel/workflow"],
+  "files": [
+    {
+      "path": "registry/steps/elevenlabs-tts.tsx",
+      "type": "registry:component",
+      "content": "'use workflow';\n\nimport { workflow, fatalError } from '@vercel/workflow';\n\ntype ElevenLabsParams = {\n  text: string;\n  voice_id?: string;\n  model_id?: string;\n  voice_settings?: {\n    stability: number;\n    similarity_boost: number;\n  };\n};\n\nexport const elevenlabsTTS = workflow(\n  'elevenlabs-tts',\n  async (params: ElevenLabsParams) => {\n    const apiKey = process.env.ELEVENLABS_API_KEY;\n\n    if (!apiKey) {\n      throw fatalError('ELEVENLABS_API_KEY is required');\n    }\n\n    const voiceId = params.voice_id || '21m00Tcm4TlvDq8ikWAM'; // Default voice\n    const response = await fetch(\n      \\`https://api.elevenlabs.io/v1/text-to-speech/\\${voiceId}\\",
+      "target": "components/steps/elevenlabs-tts.tsx"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "stability-ai-image",
+  "type": "registry:block",
+  "title": "Stability AI Image Generation",
+  "description": "Generate images using Stable Diffusion models",
+  "registryDependencies": [],
+  "dependencies": ["@vercel/workflow"],
+  "files": [
+    {
+      "path": "registry/steps/stability-ai-image.tsx",
+      "type": "registry:component",
+      "content": "'use workflow';\n\nimport { workflow, fatalError } from '@vercel/workflow';\n\ntype StabilityParams = {\n  prompt: string;\n  negative_prompt?: string;\n  width?: number;\n  height?: number;\n  steps?: number;\n};\n\nexport const stabilityAIImage = workflow(\n  'stability-ai-image',\n  async (params: StabilityParams) => {\n    const apiKey = process.env.STABILITY_API_KEY;\n\n    if (!apiKey) {\n      throw fatalError('STABILITY_API_KEY is required');\n    }\n\n    const formData = new FormData();\n    formData.append('prompt', params.prompt);\n    if (params.negative_prompt) {\n      formData.append('negative_prompt', params.negative_prompt);\n    }\n    formData.append('output_format', 'png');\n\n    const response = await fetch(\n      'https://api.stability.ai/v2beta/stable-image/generate/core',\n      {\n        method: 'POST',\n        headers: {\n          'Authorization': \\`Bearer \\${apiKey}\\",
+      "target": "components/steps/stability-ai-image.tsx"
+    }
+  ]
+}

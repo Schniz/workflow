@@ -1,0 +1,16 @@
+{
+  "name": "http-request",
+  "type": "registry:block",
+  "title": "HTTP Request",
+  "description": "Make HTTP requests to any API endpoint",
+  "registryDependencies": [],
+  "dependencies": ["@vercel/workflow"],
+  "files": [
+    {
+      "path": "registry/steps/http-request.tsx",
+      "type": "registry:component",
+      "content": "'use workflow';\n\nimport { workflow, retryableError } from '@vercel/workflow';\n\ntype HttpRequestParams = {\n  url: string;\n  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';\n  headers?: Record<string, string>;\n  body?: any;\n};\n\nexport const httpRequest = workflow(\n  'http-request',\n  async (params: HttpRequestParams) => {\n    const response = await fetch(params.url, {\n      method: params.method,\n      headers: params.headers,\n      body: params.body ? JSON.stringify(params.body) : undefined,\n    });\n\n    if (!response.ok) {\n      throw retryableError(\\`HTTP \\${response.status}: \\${response.statusText}\\`);\n    }\n\n    return await response.json();\n  }\n);",
+      "target": "components/steps/http-request.tsx"
+    }
+  ]
+}

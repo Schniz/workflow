@@ -11,7 +11,8 @@
     "postbuild": "node scripts/pack.ts",
     "lint": "biome check && bun scripts/lint.ts",
     "lint:links": "bun scripts/lint.ts",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "registry:build": "node scripts/build-registry.js"
   },
   "dependencies": {
     "@biomejs/biome": "catalog:",

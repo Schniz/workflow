@@ -18,5 +18,7 @@
     "lib": "@/lib",
     "hooks": "@/hooks"
   },
-  "registries": {}
+  "registries": {
+    "@workflow": "https://workflow-registry.vercel.app/r/{name}.json"
+  }
 }

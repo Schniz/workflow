@@ -1,0 +1,16 @@
+{
+  "name": "assemblyai-transcribe",
+  "type": "registry:block",
+  "title": "AssemblyAI Transcription",
+  "description": "Transcribe and analyze audio with AssemblyAI",
+  "registryDependencies": [],
+  "dependencies": ["@vercel/workflow"],
+  "files": [
+    {
+      "path": "registry/steps/assemblyai-transcribe.tsx",
+      "type": "registry:component",
+      "content": "'use workflow';\n\nimport { workflow, fatalError } from '@vercel/workflow';\n\ntype AssemblyAIParams = {\n  audio_url: string;\n  speaker_labels?: boolean;\n};\n\nexport const assemblyaiTranscribe = workflow(\n  'assemblyai-transcribe',\n  async (params: AssemblyAIParams) => {\n    const apiKey = process.env.ASSEMBLYAI_API_KEY;\n\n    if (!apiKey) {\n      throw fatalError('ASSEMBLYAI_API_KEY is required');\n    }\n\n    // Submit transcription\n    const submitResponse = await fetch('https://api.assemblyai.com/v2/transcript', {\n      method: 'POST',\n      headers: {\n        'Authorization': apiKey,\n        'Content-Type': 'application/json',\n      },\n      body: JSON.stringify({\n        audio_url: params.audio_url,\n        speaker_labels: params.speaker_labels || false,\n      }),\n    });\n\n    if (!submitResponse.ok) {\n      throw fatalError(\\`AssemblyAI API error: \\${submitResponse.status}\\`);\n    }\n\n    const { id } = await submitResponse.json();\n\n    // Poll for completion\n    let transcript;\n    while (true) {\n      const pollResponse = await fetch(\n        \\`https://api.assemblyai.com/v2/transcript/\\${id}\\",
+      "target": "components/steps/assemblyai-transcribe.tsx"
+    }
+  ]
+}

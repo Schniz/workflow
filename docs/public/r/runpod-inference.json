@@ -1,0 +1,16 @@
+{
+  "name": "runpod-inference",
+  "type": "registry:block",
+  "title": "RunPod GPU Inference",
+  "description": "Run AI models on RunPod serverless GPUs",
+  "registryDependencies": [],
+  "dependencies": ["@vercel/workflow"],
+  "files": [
+    {
+      "path": "registry/steps/runpod-inference.tsx",
+      "type": "registry:component",
+      "content": "'use workflow';\n\nimport { workflow, fatalError } from '@vercel/workflow';\n\ntype RunPodParams = {\n  endpoint_id: string;\n  input: Record<string, any>;\n};\n\nexport const runpodInference = workflow(\n  'runpod-inference',\n  async (params: RunPodParams) => {\n    const apiKey = process.env.RUNPOD_API_KEY;\n\n    if (!apiKey) {\n      throw fatalError('RUNPOD_API_KEY is required');\n    }\n\n    const response = await fetch(\n      \\`https://api.runpod.ai/v2/\\${params.endpoint_id}/run\\",
+      "target": "components/steps/runpod-inference.tsx"
+    }
+  ]
+}

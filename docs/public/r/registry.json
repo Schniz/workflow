@@ -1,0 +1,139 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "workflow-elements",
+  "homepage": "https://workflow-registry.vercel.app",
+  "items": [
+    {
+      "name": "send-slack-message",
+      "type": "registry:block",
+      "title": "Send Slack Message",
+      "description": "Send a message to a Slack channel or user using the Slack API"
+    },
+    {
+      "name": "send-email-resend",
+      "type": "registry:block",
+      "title": "Send Email with Resend",
+      "description": "Send transactional emails using the Resend API"
+    },
+    {
+      "name": "openai-chat",
+      "type": "registry:block",
+      "title": "OpenAI Chat Completion",
+      "description": "Generate chat completions using OpenAI GPT models"
+    },
+    {
+      "name": "anthropic-claude",
+      "type": "registry:block",
+      "title": "Anthropic Claude",
+      "description": "Generate responses using Claude AI models from Anthropic"
+    },
+    {
+      "name": "replicate-model",
+      "type": "registry:block",
+      "title": "Replicate Model Inference",
+      "description": "Run AI models on Replicate for image generation, video, and more"
+    },
+    {
+      "name": "google-gemini",
+      "type": "registry:block",
+      "title": "Google Gemini",
+      "description": "Generate content using Google Gemini AI models"
+    },
+    {
+      "name": "huggingface-inference",
+      "type": "registry:block",
+      "title": "Hugging Face Inference",
+      "description": "Run inference on Hugging Face models via their API"
+    },
+    {
+      "name": "cohere-generate",
+      "type": "registry:block",
+      "title": "Cohere Text Generation",
+      "description": "Generate text using Cohere AI models"
+    },
+    {
+      "name": "elevenlabs-tts",
+      "type": "registry:block",
+      "title": "ElevenLabs Text-to-Speech",
+      "description": "Convert text to speech using ElevenLabs AI voices"
+    },
+    {
+      "name": "stability-ai-image",
+      "type": "registry:block",
+      "title": "Stability AI Image Generation",
+      "description": "Generate images using Stable Diffusion models"
+    },
+    {
+      "name": "mistral-ai",
+      "type": "registry:block",
+      "title": "Mistral AI",
+      "description": "Use Mistral AI models for fast and efficient text generation"
+    },
+    {
+      "name": "perplexity-ai",
+      "type": "registry:block",
+      "title": "Perplexity AI",
+      "description": "Search and answer questions with Perplexity AI"
+    },
+    {
+      "name": "together-ai",
+      "type": "registry:block",
+      "title": "Together AI",
+      "description": "Run open-source models with Together AI inference"
+    },
+    {
+      "name": "runpod-inference",
+      "type": "registry:block",
+      "title": "RunPod GPU Inference",
+      "description": "Run AI models on RunPod serverless GPUs"
+    },
+    {
+      "name": "deepgram-transcribe",
+      "type": "registry:block",
+      "title": "Deepgram Speech-to-Text",
+      "description": "Transcribe audio to text with Deepgram AI"
+    },
+    {
+      "name": "assemblyai-transcribe",
+      "type": "registry:block",
+      "title": "AssemblyAI Transcription",
+      "description": "Transcribe and analyze audio with AssemblyAI"
+    },
+    {
+      "name": "fireworks-ai",
+      "type": "registry:block",
+      "title": "Fireworks AI",
+      "description": "Fast inference for open-source AI models"
+    },
+    {
+      "name": "openrouter-ai",
+      "type": "registry:block",
+      "title": "OpenRouter AI",
+      "description": "Access multiple AI models through a unified API"
+    },
+    {
+      "name": "leonardo-ai",
+      "type": "registry:block",
+      "title": "Leonardo AI Image Generation",
+      "description": "Generate creative images with Leonardo AI"
+    },
+    {
+      "name": "groq-inference",
+      "type": "registry:block",
+      "title": "Groq LPU Inference",
+      "description": "Ultra-fast AI inference with Groq LPU technology"
+    },
+    {
+      "name": "http-request",
+      "type": "registry:block",
+      "title": "HTTP Request",
+      "description": "Make HTTP requests to any API endpoint"
+    },
+    {
+      "name": "stripe-payment",
+      "type": "registry:block",
+      "title": "Stripe Payment",
+      "description": "Process payments using the Stripe API"
+    }
+  ]
+}

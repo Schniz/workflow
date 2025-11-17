@@ -1,0 +1,16 @@
+{
+  "name": "deepgram-transcribe",
+  "type": "registry:block",
+  "title": "Deepgram Speech-to-Text",
+  "description": "Transcribe audio to text with Deepgram AI",
+  "registryDependencies": [],
+  "dependencies": ["@vercel/workflow"],
+  "files": [
+    {
+      "path": "registry/steps/deepgram-transcribe.tsx",
+      "type": "registry:component",
+      "content": "'use workflow';\n\nimport { workflow, fatalError } from '@vercel/workflow';\n\ntype DeepgramParams = {\n  audio_url: string;\n  model?: string;\n  language?: string;\n};\n\nexport const deepgramTranscribe = workflow(\n  'deepgram-transcribe',\n  async (params: DeepgramParams) => {\n    const apiKey = process.env.DEEPGRAM_API_KEY;\n\n    if (!apiKey) {\n      throw fatalError('DEEPGRAM_API_KEY is required');\n    }\n\n    const model = params.model || 'nova-2';\n    const language = params.language || 'en';\n\n    const response = await fetch(\n      \\`https://api.deepgram.com/v1/listen?model=\\${model}&language=\\${language}\\",
+      "target": "components/steps/deepgram-transcribe.tsx"
+    }
+  ]
+}
