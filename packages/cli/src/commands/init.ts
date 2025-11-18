@@ -20,12 +20,25 @@ import { BaseCommand } from '../base.js';
 
 const execAsync = promisify(exec);
 
-const templates = {
+const templates: Record<string, { name: string; disabled?: boolean }> = {
   next: {
     name: 'Next.js',
   },
   hono: {
     name: 'Hono',
+    disabled: true,
+  },
+  vite: {
+    name: 'Vite',
+    disabled: true,
+  },
+  express: {
+    name: 'Express',
+    disabled: true,
+  },
+  astro: {
+    name: 'Astro',
+    disabled: true,
   },
   nitro: {
     name: 'Nitro',
@@ -65,20 +78,42 @@ export default class Init extends BaseCommand {
   };
 
   /**
-   *
-   * @returns true if the current directory is a Next.js app
+   * Detects the framework type of the current project
+   * @returns The detected framework type ('next', 'nitro', 'nuxt', 'sveltekit') or null if none detected
    */
-  private isNextApp(): boolean {
-    const configFiles = [
+  private checkExistingProject(): string | false {
+    const cwd = process.cwd();
+
+    // Check for Next.js
+    const nextConfigFiles = [
       'next.config.js',
       'next.config.mjs',
       'next.config.ts',
       'next.config.cjs',
     ];
+    if (nextConfigFiles.some((file) => existsSync(path.join(cwd, file)))) {
+      return 'next';
+    }
 
-    return configFiles.some((file) =>
-      existsSync(path.join(process.cwd(), file))
-    );
+    // Check for Nitro
+    const nitroConfigFiles = ['nitro.config.ts', 'nitro.config.js'];
+    if (nitroConfigFiles.some((file) => existsSync(path.join(cwd, file)))) {
+      return 'nitro';
+    }
+
+    // Check for Nuxt
+    const nuxtConfigFiles = ['nuxt.config.ts', 'nuxt.config.js'];
+    if (nuxtConfigFiles.some((file) => existsSync(path.join(cwd, file)))) {
+      return 'nuxt';
+    }
+
+    // Check for SvelteKit
+    const svelteConfigFiles = ['svelte.config.js', 'svelte.config.ts'];
+    if (svelteConfigFiles.some((file) => existsSync(path.join(cwd, file)))) {
+      return 'sveltekit';
+    }
+
+    return false;
   }
 
   public async run(): Promise<void> {
@@ -88,13 +123,12 @@ export default class Init extends BaseCommand {
 
     let template = flags.template;
 
-    const isNextApp = this.isNextApp();
+    const detectedFramework = this.checkExistingProject();
 
     let createNewProject = true;
 
-    if (isNextApp) {
-      log.info('Detected Next.js app');
-
+    if (detectedFramework) {
+      log.info(`Detected ${templates[detectedFramework].name} project`);
       // TODO: Add setup in already existing project
 
       createNewProject = (await confirm({
@@ -105,6 +139,11 @@ export default class Init extends BaseCommand {
       if (isCancel(createNewProject)) {
         cancel('Cancelled workflow setup');
         return;
+      }
+
+      // If not creating a new project, use the detected framework as the template
+      if (!createNewProject) {
+        template = detectedFramework;
       }
     }
 
@@ -129,6 +168,7 @@ export default class Init extends BaseCommand {
         options: Object.entries(templates).map(([key, value]) => ({
           label: value.name,
           value: key,
+          disabled: value.disabled,
         })),
         initialValue: 'next',
       })) as string;
@@ -235,15 +275,48 @@ export default class Init extends BaseCommand {
         enabled: template === 'nitro',
         task: async (message) => {
           message('Configuring Nitro config');
-          const nitroConfig = `import { defineConfig } from "nitro";
+
+          const configPath = path.join(projectPath, 'nitro.config.ts');
+
+          if (createNewProject) {
+            // For new projects, create a complete config file
+            const nitroConfig = `import { defineConfig } from "nitro";
 
 export default defineConfig({
   serverDir: "./server",
   modules: ["workflow/nitro"],
 });
 `;
+            writeFileSync(configPath, nitroConfig);
+          } else {
+            // For existing projects, modify the existing config
+            let nitroConfig = readFileSync(configPath, 'utf8');
 
-          writeFileSync(path.join(projectPath, 'nitro.config.ts'), nitroConfig);
+            // Add workflow/nitro to modules array if not present
+            if (!nitroConfig.includes('workflow/nitro')) {
+              // Check if modules array exists
+              if (nitroConfig.includes('modules:')) {
+                // Add to existing modules array
+                nitroConfig = nitroConfig.replace(
+                  /modules:\s*\[\s*([^\]]*)\s*\]/g,
+                  (_match, modulesContent) => {
+                    if (modulesContent.trim()) {
+                      return `modules: [${modulesContent.trim()}, "workflow/nitro"]`;
+                    }
+                    return `modules: ["workflow/nitro"]`;
+                  }
+                );
+              } else {
+                // Add modules array to config object
+                nitroConfig = nitroConfig.replace(
+                  /defineConfig\(\{/g,
+                  `defineConfig({\n  modules: ["workflow/nitro"],`
+                );
+              }
+            }
+
+            writeFileSync(configPath, nitroConfig);
+          }
 
           return 'Configured Nitro config';
         },
@@ -253,15 +326,48 @@ export default defineConfig({
         enabled: template === 'nuxt',
         task: async (message) => {
           message('Configuring Nuxt config');
-          const nuxtConfig = `import { defineNuxtConfig } from "nuxt/config";
+
+          const configPath = path.join(projectPath, 'nuxt.config.ts');
+
+          if (createNewProject) {
+            // For new projects, create a complete config file
+            const nuxtConfig = `import { defineNuxtConfig } from "nuxt/config";
 
 export default defineNuxtConfig({
   modules: ["workflow/nuxt"],
   compatibilityDate: "latest",
 });
 `;
+            writeFileSync(configPath, nuxtConfig);
+          } else {
+            // For existing projects, modify the existing config
+            let nuxtConfig = readFileSync(configPath, 'utf8');
 
-          writeFileSync(path.join(projectPath, 'nuxt.config.ts'), nuxtConfig);
+            // Add workflow/nuxt to modules array if not present
+            if (!nuxtConfig.includes('workflow/nuxt')) {
+              // Check if modules array exists
+              if (nuxtConfig.includes('modules:')) {
+                // Add to existing modules array
+                nuxtConfig = nuxtConfig.replace(
+                  /modules:\s*\[\s*([^\]]*)\s*\]/g,
+                  (_match, modulesContent) => {
+                    if (modulesContent.trim()) {
+                      return `modules: [${modulesContent.trim()}, "workflow/nuxt"]`;
+                    }
+                    return `modules: ["workflow/nuxt"]`;
+                  }
+                );
+              } else {
+                // Add modules array to config object
+                nuxtConfig = nuxtConfig.replace(
+                  /defineNuxtConfig\(\{/g,
+                  `defineNuxtConfig({\n  modules: ["workflow/nuxt"],`
+                );
+              }
+            }
+
+            writeFileSync(configPath, nuxtConfig);
+          }
 
           return 'Configured Nuxt config';
         },
@@ -275,14 +381,31 @@ export default defineNuxtConfig({
             path.join(projectPath, 'vite.config.ts'),
             'utf8'
           );
-          viteConfig = viteConfig.replace(
-            /import { sveltekit } from ['"]@sveltejs\/kit\/vite['"];/g,
-            `import { sveltekit } from '@sveltejs/kit/vite';\nimport { workflowPlugin } from 'workflow/sveltekit';`
-          );
-          viteConfig = viteConfig.replace(
-            /plugins: \[sveltekit\(\)\]/g,
-            'plugins: [sveltekit(), workflowPlugin()]'
-          );
+
+          // Add workflowPlugin import if not present
+          if (!viteConfig.includes('workflowPlugin')) {
+            viteConfig = viteConfig.replace(
+              /import { sveltekit } from ['"]@sveltejs\/kit\/vite['"];/g,
+              `import { sveltekit } from '@sveltejs/kit/vite';\nimport { workflowPlugin } from 'workflow/sveltekit';`
+            );
+          }
+
+          // Add workflowPlugin to plugins array
+          if (!viteConfig.includes('workflowPlugin()')) {
+            // Handle various plugin array patterns
+            viteConfig = viteConfig.replace(
+              /plugins:\s*\[\s*([^\]]+)\s*\]/g,
+              (match, pluginsContent) => {
+                // Check if workflowPlugin is already in the array
+                if (pluginsContent.includes('workflowPlugin')) {
+                  return match;
+                }
+                // Add workflowPlugin as the first plugin
+                return `plugins: [workflowPlugin(), ${pluginsContent.trim()}]`;
+              }
+            );
+          }
+
           writeFileSync(path.join(projectPath, 'vite.config.ts'), viteConfig);
           return 'Configured Vite config';
         },
@@ -500,14 +623,12 @@ export const POST: RequestHandler = async ({
       },
     ]);
 
-    cancel('Cancelled workflow setup');
-
     const port = template === 'sveltekit' ? '5173' : '3000';
 
     outro(
       `${chalk.green('Success!')} Next steps:
-     Run ${chalk.dim(`${createNewProject ? `cd ${projectName} && ` : ''}${packageManager} run dev`)} to start the development server
-     Trigger the workflow: ${chalk.dim(`curl -X POST --json '{"email":"hello@example.com"}' http://localhost:${port}/api/signup`)}`
+     Run ${chalk.cyan(`${createNewProject ? `cd ${projectName} && ` : ''}${packageManager} run dev`)} to start the development server
+     Trigger the workflow: ${chalk.cyan(`curl -X POST --json '{"email":"hello@example.com"}' http://localhost:${port}/api/signup`)}`
     );
   }
 }
