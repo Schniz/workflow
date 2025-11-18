@@ -116,7 +116,7 @@ export const Route = createFileRoute('/api/trigger')({
             console.log('[Stream] Returning recreated stream');
             return new Response(stream, {
               headers: {
-                'Content-Type': 'text/plain',
+                'Content-Type': 'application/octet-stream',
                 'Cache-Control': 'no-cache',
                 'Transfer-Encoding': 'chunked',
               },

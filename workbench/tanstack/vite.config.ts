@@ -8,9 +8,7 @@ import { workflow } from 'workflow/vite';
 
 const config = defineConfig({
   plugins: [
-    workflow({
-      dirs: ['src/workflows'],
-    }),
+    workflow(),
     // this is the plugin that enables path aliases
     viteTsConfigPaths({
       projects: ['./tsconfig.json'],
