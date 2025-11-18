@@ -296,10 +296,14 @@ export default defineConfig({
             if (!nitroConfig.includes('workflow/nitro')) {
               // Check if modules array exists
               if (nitroConfig.includes('modules:')) {
-                // Add to existing modules array
+                // Add to existing modules array (only if workflow/nitro not already there)
                 nitroConfig = nitroConfig.replace(
                   /modules:\s*\[\s*([^\]]*)\s*\]/g,
                   (_match, modulesContent) => {
+                    // Double check it's not already in the array
+                    if (modulesContent.includes('workflow/nitro')) {
+                      return _match;
+                    }
                     if (modulesContent.trim()) {
                       return `modules: [${modulesContent.trim()}, "workflow/nitro"]`;
                     }
@@ -307,10 +311,10 @@ export default defineConfig({
                   }
                 );
               } else {
-                // Add modules array to config object
+                // Add modules array to config object - handle both defineConfig and defineNitroConfig
                 nitroConfig = nitroConfig.replace(
-                  /defineConfig\(\{/g,
-                  `defineConfig({\n  modules: ["workflow/nitro"],`
+                  /define(?:Nitro)?Config\(\{/g,
+                  (match) => `${match}\n  modules: ["workflow/nitro"],`
                 );
               }
             }
@@ -347,10 +351,14 @@ export default defineNuxtConfig({
             if (!nuxtConfig.includes('workflow/nuxt')) {
               // Check if modules array exists
               if (nuxtConfig.includes('modules:')) {
-                // Add to existing modules array
+                // Add to existing modules array (only if workflow/nuxt not already there)
                 nuxtConfig = nuxtConfig.replace(
                   /modules:\s*\[\s*([^\]]*)\s*\]/g,
                   (_match, modulesContent) => {
+                    // Double check it's not already in the array
+                    if (modulesContent.includes('workflow/nuxt')) {
+                      return _match;
+                    }
                     if (modulesContent.trim()) {
                       return `modules: [${modulesContent.trim()}, "workflow/nuxt"]`;
                     }
@@ -361,7 +369,7 @@ export default defineNuxtConfig({
                 // Add modules array to config object
                 nuxtConfig = nuxtConfig.replace(
                   /defineNuxtConfig\(\{/g,
-                  `defineNuxtConfig({\n  modules: ["workflow/nuxt"],`
+                  (match) => `${match}\n  modules: ["workflow/nuxt"],`
                 );
               }
             }
@@ -382,21 +390,25 @@ export default defineNuxtConfig({
             'utf8'
           );
 
+          // Check if workflowPlugin is already configured
+          const hasWorkflowImport = viteConfig.includes('workflowPlugin');
+          const hasWorkflowInPlugins = viteConfig.includes('workflowPlugin()');
+
           // Add workflowPlugin import if not present
-          if (!viteConfig.includes('workflowPlugin')) {
+          if (!hasWorkflowImport) {
             viteConfig = viteConfig.replace(
               /import { sveltekit } from ['"]@sveltejs\/kit\/vite['"];/g,
               `import { sveltekit } from '@sveltejs/kit/vite';\nimport { workflowPlugin } from 'workflow/sveltekit';`
             );
           }
 
-          // Add workflowPlugin to plugins array
-          if (!viteConfig.includes('workflowPlugin()')) {
+          // Add workflowPlugin to plugins array if not present
+          if (!hasWorkflowInPlugins) {
             // Handle various plugin array patterns
             viteConfig = viteConfig.replace(
               /plugins:\s*\[\s*([^\]]+)\s*\]/g,
               (match, pluginsContent) => {
-                // Check if workflowPlugin is already in the array
+                // Double check if workflowPlugin is already in the array
                 if (pluginsContent.includes('workflowPlugin')) {
                   return match;
                 }
@@ -412,7 +424,7 @@ export default defineNuxtConfig({
       },
       {
         title: 'Configuring TypeScript intellisense',
-        enabled: useTsPlugin && template !== 'nuxt',
+        enabled: useTsPlugin,
         task: async (message) => {
           message(`Configuring TypeScript intellisense`);
           const tsConfig = parseJSON(
@@ -424,9 +436,18 @@ export default defineNuxtConfig({
           if (!tsConfig.compilerOptions.plugins) {
             tsConfig.compilerOptions.plugins = [];
           }
-          tsConfig.compilerOptions.plugins.push({
-            name: 'workflow',
-          });
+
+          // Only add workflow plugin if it doesn't already exist
+          const hasWorkflowPlugin = tsConfig.compilerOptions.plugins.some(
+            (plugin: any) => plugin.name === 'workflow'
+          );
+
+          if (!hasWorkflowPlugin) {
+            tsConfig.compilerOptions.plugins.push({
+              name: 'workflow',
+            });
+          }
+
           writeFileSync(
             path.join(projectPath, 'tsconfig.json'),
             stringifyJSON(tsConfig, null, 2)
