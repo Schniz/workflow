@@ -43,14 +43,87 @@ export const Route = createFileRoute('/api/trigger')({
         try {
           const run = getRun(runId);
           const returnValue = await run.returnValue;
-          console.log('Return value:', returnValue);
-          return returnValue instanceof ReadableStream
-            ? new Response(returnValue, {
-                headers: {
-                  'Content-Type': 'application/octet-stream',
-                },
-              })
-            : json(returnValue);
+          console.log(
+            'Return value type:',
+            typeof returnValue,
+            returnValue instanceof ReadableStream
+          );
+
+          if (returnValue instanceof ReadableStream) {
+            console.log('[Stream] Got ReadableStream as return value');
+            console.log('[Stream] Stream properties:', {
+              locked: returnValue.locked,
+              constructor: returnValue.constructor.name,
+              hasReader: 'getReader' in returnValue,
+            });
+
+            // Try to recreate the stream similar to the working test
+            const stream = new ReadableStream({
+              async start(controller) {
+                console.log('[Stream] Starting stream recreation');
+                const reader = returnValue.getReader();
+                let chunkCount = 0;
+
+                try {
+                  while (true) {
+                    console.log(`[Stream] Reading chunk ${chunkCount + 1}...`);
+                    const { done, value } = await reader.read();
+
+                    if (done) {
+                      console.log(
+                        `[Stream] Original stream done after ${chunkCount} chunks`
+                      );
+                      controller.close();
+                      break;
+                    }
+
+                    chunkCount++;
+                    console.log(`[Stream] Got chunk ${chunkCount}:`, {
+                      type: typeof value,
+                      size: value?.length || value?.byteLength || 'unknown',
+                      preview:
+                        value instanceof Uint8Array
+                          ? new TextDecoder().decode(value.slice(0, 50))
+                          : String(value).slice(0, 50),
+                    });
+
+                    controller.enqueue(value);
+                    console.log(`[Stream] Enqueued chunk ${chunkCount}`);
+
+                    // Small yield to ensure chunks are processed
+                    await new Promise((resolve) => setImmediate(resolve));
+                  }
+                } catch (error) {
+                  console.error(
+                    '[Stream] Error reading from workflow stream:',
+                    error
+                  );
+                  controller.error(error);
+                } finally {
+                  console.log('[Stream] Releasing reader lock');
+                  reader.releaseLock();
+                }
+              },
+              cancel(reason) {
+                const err = new Error(`Stream cancelled: ${reason}`);
+                Error.captureStackTrace(err, this.cancel);
+                console.log(err.stack);
+                console.log('[Stream] New stream cancelled:', reason);
+                console.trace();
+              },
+            });
+
+            console.log('[Stream] Returning recreated stream');
+            return new Response(stream, {
+              headers: {
+                'Content-Type': 'text/plain',
+                'Cache-Control': 'no-cache',
+                'Transfer-Encoding': 'chunked',
+              },
+            });
+          }
+
+          return json(returnValue);
         } catch (error) {
           if (error instanceof Error) {
             if (error.name === 'WorkflowRunNotCompletedError') {

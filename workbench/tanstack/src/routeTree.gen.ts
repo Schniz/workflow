@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root';
 import { Route as IndexRouteImport } from './routes/index';
 import { Route as ApiTriggerRouteImport } from './routes/api/trigger';
+import { Route as ApiTestStreamRouteImport } from './routes/api/test-stream';
 import { Route as ApiTestDirectStepCallRouteImport } from './routes/api/test-direct-step-call';
 import { Route as ApiHookRouteImport } from './routes/api/hook';
 import { Route as ApiChatRouteImport } from './routes/api/chat';
@@ -23,6 +24,11 @@ const IndexRoute = IndexRouteImport.update({
 const ApiTriggerRoute = ApiTriggerRouteImport.update({
   id: '/api/trigger',
   path: '/api/trigger',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const ApiTestStreamRoute = ApiTestStreamRouteImport.update({
+  id: '/api/test-stream',
+  path: '/api/test-stream',
   getParentRoute: () => rootRouteImport,
 } as any);
 const ApiTestDirectStepCallRoute = ApiTestDirectStepCallRouteImport.update({
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute;
   '/api/hook': typeof ApiHookRoute;
   '/api/test-direct-step-call': typeof ApiTestDirectStepCallRoute;
+  '/api/test-stream': typeof ApiTestStreamRoute;
   '/api/trigger': typeof ApiTriggerRoute;
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute;
   '/api/hook': typeof ApiHookRoute;
   '/api/test-direct-step-call': typeof ApiTestDirectStepCallRoute;
+  '/api/test-stream': typeof ApiTestStreamRoute;
   '/api/trigger': typeof ApiTriggerRoute;
 }
 export interface FileRoutesById {
@@ -61,6 +69,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute;
   '/api/hook': typeof ApiHookRoute;
   '/api/test-direct-step-call': typeof ApiTestDirectStepCallRoute;
+  '/api/test-stream': typeof ApiTestStreamRoute;
   '/api/trigger': typeof ApiTriggerRoute;
 }
 export interface FileRouteTypes {
@@ -70,6 +79,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/hook'
     | '/api/test-direct-step-call'
+    | '/api/test-stream'
     | '/api/trigger';
   fileRoutesByTo: FileRoutesByTo;
   to:
@@ -77,6 +87,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/hook'
     | '/api/test-direct-step-call'
+    | '/api/test-stream'
     | '/api/trigger';
   id:
     | '__root__'
@@ -84,6 +95,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/hook'
     | '/api/test-direct-step-call'
+    | '/api/test-stream'
     | '/api/trigger';
   fileRoutesById: FileRoutesById;
 }
@@ -92,6 +104,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute;
   ApiHookRoute: typeof ApiHookRoute;
   ApiTestDirectStepCallRoute: typeof ApiTestDirectStepCallRoute;
+  ApiTestStreamRoute: typeof ApiTestStreamRoute;
   ApiTriggerRoute: typeof ApiTriggerRoute;
 }
 
@@ -109,6 +122,13 @@ declare module '@tanstack/react-router' {
       path: '/api/trigger';
       fullPath: '/api/trigger';
       preLoaderRoute: typeof ApiTriggerRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/api/test-stream': {
+      id: '/api/test-stream';
+      path: '/api/test-stream';
+      fullPath: '/api/test-stream';
+      preLoaderRoute: typeof ApiTestStreamRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/api/test-direct-step-call': {
@@ -140,6 +160,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiHookRoute: ApiHookRoute,
   ApiTestDirectStepCallRoute: ApiTestDirectStepCallRoute,
+  ApiTestStreamRoute: ApiTestStreamRoute,
   ApiTriggerRoute: ApiTriggerRoute,
 };
 export const routeTree = rootRouteImport
