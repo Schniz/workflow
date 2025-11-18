@@ -235,14 +235,11 @@ export default class Init extends BaseCommand {
         enabled: template === 'nitro',
         task: async (message) => {
           message('Configuring Nitro config');
-          const nitroConfig = `import { defineNitroConfig } from "nitropack/config";
+          const nitroConfig = `import { defineConfig } from "nitro";
 
-// https://nitro.build/config
-export default defineNitroConfig({
-	compatibilityDate: "latest",
-	srcDir: "server",
-	imports: false,
-	modules: ["workflow/nitro"],
+export default defineConfig({
+  serverDir: "./server",
+  modules: ["workflow/nitro"],
 });
 `;
 
@@ -360,6 +357,8 @@ export async function handleUserSignup(email: string) {
  await sleep("5s"); // Pause for 5s - doesn't consume any resources
  await sendOnboardingEmail(user);
 
+ console.log("Workflow is complete! Run 'npx workflow web' to inspect your run")
+
  return { userId: user.id, status: "onboarded" };
 }
 
@@ -426,18 +425,18 @@ export async function POST(request: Request) {
               writeFileSync(
                 path.join(apiPath, 'signup.post.ts'),
                 `import { start } from 'workflow/api';
-import { defineEventHandler, readBody } from 'h3';
+import { defineEventHandler } from 'nitro/h3';
 import { handleUserSignup } from "../../workflows/user-signup";
 
-export default defineEventHandler(async (event) => {
-  const { email } = await readBody(event);
+export default defineEventHandler(async ({ req }) => {
+  const { email } = await req.json() as { email: string };
 
   // Executes asynchronously and doesn't block your app
   await start(handleUserSignup, [email]);
 
-  return Response.json({
+  return {
     message: "User signup workflow started",
-  });
+  }
 });`
               );
               return `Created API route handler in ${chalk.cyan(path.join(projectPath, 'server', 'api', 'signup.post.ts'))}`;
