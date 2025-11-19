@@ -43,6 +43,12 @@ const DEV_TEST_CONFIGS = {
     apiFilePath: './src/index.ts',
     apiFileImportPath: '..',
   },
+  tanstack: {
+    generatedStepPath: 'src/routes/[.]well-known/workflow/v1/step.ts',
+    generatedWorkflowPath: 'src/routes/[.]well-known/workflow/v1/flow.ts',
+    apiFilePath: 'src/routes/api/chat.ts',
+    apiFileImportPath: '..',
+  },
 };
 
 const matrix = {
@@ -98,6 +104,12 @@ matrix.app.push({
   name: 'vite',
   project: 'workbench-vite-workflow',
   ...DEV_TEST_CONFIGS.vite,
+});
+
+matrix.app.push({
+  name: 'tanstack',
+  project: 'workbench-tanstack-workflow',
+  ...DEV_TEST_CONFIGS.tanstack,
 });
 
 console.log(JSON.stringify(matrix));
