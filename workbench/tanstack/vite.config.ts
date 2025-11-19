@@ -4,11 +4,11 @@ import viteReact from '@vitejs/plugin-react';
 import { nitro } from 'nitro/vite';
 import { defineConfig } from 'vite';
 import viteTsConfigPaths from 'vite-tsconfig-paths';
-import { workflow } from 'workflow/vite';
+import { workflowPlugin } from 'workflow/tanstack';
 
 const config = defineConfig({
   plugins: [
-    workflow(),
+    workflowPlugin(),
     // this is the plugin that enables path aliases
     viteTsConfigPaths({
       projects: ['./tsconfig.json'],
