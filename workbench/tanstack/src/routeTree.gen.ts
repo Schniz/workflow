@@ -8,102 +8,102 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root';
-import { Route as IndexRouteImport } from './routes/index';
-import { Route as ApiTriggerRouteImport } from './routes/api/trigger';
-import { Route as ApiTestStreamRouteImport } from './routes/api/test-stream';
-import { Route as ApiTestDirectStepCallRouteImport } from './routes/api/test-direct-step-call';
-import { Route as ApiHookRouteImport } from './routes/api/hook';
-import { Route as ApiChatRouteImport } from './routes/api/chat';
-import { Route as DotwellKnownWorkflowV1StepRouteImport } from './routes/[.]well-known/workflow/v1/step';
-import { Route as DotwellKnownWorkflowV1FlowRouteImport } from './routes/[.]well-known/workflow/v1/flow';
-import { Route as DotwellKnownWorkflowV1WebhookTokenRouteImport } from './routes/[.]well-known/workflow/v1/webhook/$token';
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiTriggerRouteImport } from './routes/api/trigger'
+import { Route as ApiTestStreamRouteImport } from './routes/api/test-stream'
+import { Route as ApiTestDirectStepCallRouteImport } from './routes/api/test-direct-step-call'
+import { Route as ApiHookRouteImport } from './routes/api/hook'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as DotwellKnownWorkflowV1StepRouteImport } from './routes/[.]well-known/workflow/v1/step'
+import { Route as DotwellKnownWorkflowV1FlowRouteImport } from './routes/[.]well-known/workflow/v1/flow'
+import { Route as DotwellKnownWorkflowV1WebhookTokenRouteImport } from './routes/[.]well-known/workflow/v1/webhook/$token'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ApiTriggerRoute = ApiTriggerRouteImport.update({
   id: '/api/trigger',
   path: '/api/trigger',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ApiTestStreamRoute = ApiTestStreamRouteImport.update({
   id: '/api/test-stream',
   path: '/api/test-stream',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ApiTestDirectStepCallRoute = ApiTestDirectStepCallRouteImport.update({
   id: '/api/test-direct-step-call',
   path: '/api/test-direct-step-call',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ApiHookRoute = ApiHookRouteImport.update({
   id: '/api/hook',
   path: '/api/hook',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const DotwellKnownWorkflowV1StepRoute =
   DotwellKnownWorkflowV1StepRouteImport.update({
     id: '/.well-known/workflow/v1/step',
     path: '/.well-known/workflow/v1/step',
     getParentRoute: () => rootRouteImport,
-  } as any);
+  } as any)
 const DotwellKnownWorkflowV1FlowRoute =
   DotwellKnownWorkflowV1FlowRouteImport.update({
     id: '/.well-known/workflow/v1/flow',
     path: '/.well-known/workflow/v1/flow',
     getParentRoute: () => rootRouteImport,
-  } as any);
+  } as any)
 const DotwellKnownWorkflowV1WebhookTokenRoute =
   DotwellKnownWorkflowV1WebhookTokenRouteImport.update({
     id: '/.well-known/workflow/v1/webhook/$token',
     path: '/.well-known/workflow/v1/webhook/$token',
     getParentRoute: () => rootRouteImport,
-  } as any);
+  } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute;
-  '/api/chat': typeof ApiChatRoute;
-  '/api/hook': typeof ApiHookRoute;
-  '/api/test-direct-step-call': typeof ApiTestDirectStepCallRoute;
-  '/api/test-stream': typeof ApiTestStreamRoute;
-  '/api/trigger': typeof ApiTriggerRoute;
-  '/.well-known/workflow/v1/flow': typeof DotwellKnownWorkflowV1FlowRoute;
-  '/.well-known/workflow/v1/step': typeof DotwellKnownWorkflowV1StepRoute;
-  '/.well-known/workflow/v1/webhook/$token': typeof DotwellKnownWorkflowV1WebhookTokenRoute;
+  '/': typeof IndexRoute
+  '/api/chat': typeof ApiChatRoute
+  '/api/hook': typeof ApiHookRoute
+  '/api/test-direct-step-call': typeof ApiTestDirectStepCallRoute
+  '/api/test-stream': typeof ApiTestStreamRoute
+  '/api/trigger': typeof ApiTriggerRoute
+  '/.well-known/workflow/v1/flow': typeof DotwellKnownWorkflowV1FlowRoute
+  '/.well-known/workflow/v1/step': typeof DotwellKnownWorkflowV1StepRoute
+  '/.well-known/workflow/v1/webhook/$token': typeof DotwellKnownWorkflowV1WebhookTokenRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute;
-  '/api/chat': typeof ApiChatRoute;
-  '/api/hook': typeof ApiHookRoute;
-  '/api/test-direct-step-call': typeof ApiTestDirectStepCallRoute;
-  '/api/test-stream': typeof ApiTestStreamRoute;
-  '/api/trigger': typeof ApiTriggerRoute;
-  '/.well-known/workflow/v1/flow': typeof DotwellKnownWorkflowV1FlowRoute;
-  '/.well-known/workflow/v1/step': typeof DotwellKnownWorkflowV1StepRoute;
-  '/.well-known/workflow/v1/webhook/$token': typeof DotwellKnownWorkflowV1WebhookTokenRoute;
+  '/': typeof IndexRoute
+  '/api/chat': typeof ApiChatRoute
+  '/api/hook': typeof ApiHookRoute
+  '/api/test-direct-step-call': typeof ApiTestDirectStepCallRoute
+  '/api/test-stream': typeof ApiTestStreamRoute
+  '/api/trigger': typeof ApiTriggerRoute
+  '/.well-known/workflow/v1/flow': typeof DotwellKnownWorkflowV1FlowRoute
+  '/.well-known/workflow/v1/step': typeof DotwellKnownWorkflowV1StepRoute
+  '/.well-known/workflow/v1/webhook/$token': typeof DotwellKnownWorkflowV1WebhookTokenRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  '/': typeof IndexRoute;
-  '/api/chat': typeof ApiChatRoute;
-  '/api/hook': typeof ApiHookRoute;
-  '/api/test-direct-step-call': typeof ApiTestDirectStepCallRoute;
-  '/api/test-stream': typeof ApiTestStreamRoute;
-  '/api/trigger': typeof ApiTriggerRoute;
-  '/.well-known/workflow/v1/flow': typeof DotwellKnownWorkflowV1FlowRoute;
-  '/.well-known/workflow/v1/step': typeof DotwellKnownWorkflowV1StepRoute;
-  '/.well-known/workflow/v1/webhook/$token': typeof DotwellKnownWorkflowV1WebhookTokenRoute;
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/api/chat': typeof ApiChatRoute
+  '/api/hook': typeof ApiHookRoute
+  '/api/test-direct-step-call': typeof ApiTestDirectStepCallRoute
+  '/api/test-stream': typeof ApiTestStreamRoute
+  '/api/trigger': typeof ApiTriggerRoute
+  '/.well-known/workflow/v1/flow': typeof DotwellKnownWorkflowV1FlowRoute
+  '/.well-known/workflow/v1/step': typeof DotwellKnownWorkflowV1StepRoute
+  '/.well-known/workflow/v1/webhook/$token': typeof DotwellKnownWorkflowV1WebhookTokenRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
+  fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/api/chat'
@@ -113,8 +113,8 @@ export interface FileRouteTypes {
     | '/api/trigger'
     | '/.well-known/workflow/v1/flow'
     | '/.well-known/workflow/v1/step'
-    | '/.well-known/workflow/v1/webhook/$token';
-  fileRoutesByTo: FileRoutesByTo;
+    | '/.well-known/workflow/v1/webhook/$token'
+  fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/api/chat'
@@ -124,7 +124,7 @@ export interface FileRouteTypes {
     | '/api/trigger'
     | '/.well-known/workflow/v1/flow'
     | '/.well-known/workflow/v1/step'
-    | '/.well-known/workflow/v1/webhook/$token';
+    | '/.well-known/workflow/v1/webhook/$token'
   id:
     | '__root__'
     | '/'
@@ -135,86 +135,86 @@ export interface FileRouteTypes {
     | '/api/trigger'
     | '/.well-known/workflow/v1/flow'
     | '/.well-known/workflow/v1/step'
-    | '/.well-known/workflow/v1/webhook/$token';
-  fileRoutesById: FileRoutesById;
+    | '/.well-known/workflow/v1/webhook/$token'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  ApiChatRoute: typeof ApiChatRoute;
-  ApiHookRoute: typeof ApiHookRoute;
-  ApiTestDirectStepCallRoute: typeof ApiTestDirectStepCallRoute;
-  ApiTestStreamRoute: typeof ApiTestStreamRoute;
-  ApiTriggerRoute: typeof ApiTriggerRoute;
-  DotwellKnownWorkflowV1FlowRoute: typeof DotwellKnownWorkflowV1FlowRoute;
-  DotwellKnownWorkflowV1StepRoute: typeof DotwellKnownWorkflowV1StepRoute;
-  DotwellKnownWorkflowV1WebhookTokenRoute: typeof DotwellKnownWorkflowV1WebhookTokenRoute;
+  IndexRoute: typeof IndexRoute
+  ApiChatRoute: typeof ApiChatRoute
+  ApiHookRoute: typeof ApiHookRoute
+  ApiTestDirectStepCallRoute: typeof ApiTestDirectStepCallRoute
+  ApiTestStreamRoute: typeof ApiTestStreamRoute
+  ApiTriggerRoute: typeof ApiTriggerRoute
+  DotwellKnownWorkflowV1FlowRoute: typeof DotwellKnownWorkflowV1FlowRoute
+  DotwellKnownWorkflowV1StepRoute: typeof DotwellKnownWorkflowV1StepRoute
+  DotwellKnownWorkflowV1WebhookTokenRoute: typeof DotwellKnownWorkflowV1WebhookTokenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
     '/': {
-      id: '/';
-      path: '/';
-      fullPath: '/';
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/trigger': {
-      id: '/api/trigger';
-      path: '/api/trigger';
-      fullPath: '/api/trigger';
-      preLoaderRoute: typeof ApiTriggerRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/api/trigger'
+      path: '/api/trigger'
+      fullPath: '/api/trigger'
+      preLoaderRoute: typeof ApiTriggerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/test-stream': {
-      id: '/api/test-stream';
-      path: '/api/test-stream';
-      fullPath: '/api/test-stream';
-      preLoaderRoute: typeof ApiTestStreamRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/api/test-stream'
+      path: '/api/test-stream'
+      fullPath: '/api/test-stream'
+      preLoaderRoute: typeof ApiTestStreamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/test-direct-step-call': {
-      id: '/api/test-direct-step-call';
-      path: '/api/test-direct-step-call';
-      fullPath: '/api/test-direct-step-call';
-      preLoaderRoute: typeof ApiTestDirectStepCallRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/api/test-direct-step-call'
+      path: '/api/test-direct-step-call'
+      fullPath: '/api/test-direct-step-call'
+      preLoaderRoute: typeof ApiTestDirectStepCallRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/hook': {
-      id: '/api/hook';
-      path: '/api/hook';
-      fullPath: '/api/hook';
-      preLoaderRoute: typeof ApiHookRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/api/hook'
+      path: '/api/hook'
+      fullPath: '/api/hook'
+      preLoaderRoute: typeof ApiHookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat': {
-      id: '/api/chat';
-      path: '/api/chat';
-      fullPath: '/api/chat';
-      preLoaderRoute: typeof ApiChatRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.well-known/workflow/v1/step': {
-      id: '/.well-known/workflow/v1/step';
-      path: '/.well-known/workflow/v1/step';
-      fullPath: '/.well-known/workflow/v1/step';
-      preLoaderRoute: typeof DotwellKnownWorkflowV1StepRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/.well-known/workflow/v1/step'
+      path: '/.well-known/workflow/v1/step'
+      fullPath: '/.well-known/workflow/v1/step'
+      preLoaderRoute: typeof DotwellKnownWorkflowV1StepRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.well-known/workflow/v1/flow': {
-      id: '/.well-known/workflow/v1/flow';
-      path: '/.well-known/workflow/v1/flow';
-      fullPath: '/.well-known/workflow/v1/flow';
-      preLoaderRoute: typeof DotwellKnownWorkflowV1FlowRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/.well-known/workflow/v1/flow'
+      path: '/.well-known/workflow/v1/flow'
+      fullPath: '/.well-known/workflow/v1/flow'
+      preLoaderRoute: typeof DotwellKnownWorkflowV1FlowRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.well-known/workflow/v1/webhook/$token': {
-      id: '/.well-known/workflow/v1/webhook/$token';
-      path: '/.well-known/workflow/v1/webhook/$token';
-      fullPath: '/.well-known/workflow/v1/webhook/$token';
-      preLoaderRoute: typeof DotwellKnownWorkflowV1WebhookTokenRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/.well-known/workflow/v1/webhook/$token'
+      path: '/.well-known/workflow/v1/webhook/$token'
+      fullPath: '/.well-known/workflow/v1/webhook/$token'
+      preLoaderRoute: typeof DotwellKnownWorkflowV1WebhookTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -229,16 +229,16 @@ const rootRouteChildren: RootRouteChildren = {
   DotwellKnownWorkflowV1StepRoute: DotwellKnownWorkflowV1StepRoute,
   DotwellKnownWorkflowV1WebhookTokenRoute:
     DotwellKnownWorkflowV1WebhookTokenRoute,
-};
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()
 
-import type { getRouter } from './router.tsx';
-import type { createStart } from '@tanstack/react-start';
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
 declare module '@tanstack/react-start' {
   interface Register {
-    ssr: true;
-    router: Awaited<ReturnType<typeof getRouter>>;
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
   }
 }
