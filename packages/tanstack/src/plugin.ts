@@ -5,6 +5,12 @@ import type { HotUpdateOptions, Plugin } from 'vite';
 import { LocalBuilder, VercelBuilder } from './builder.js';
 import type {} from 'nitro/vite';
 import type { Nitro, NitroModule } from 'nitro/types';
+import type { RollupConfig } from 'nitro/types';
+
+type RollupPlugin = Exclude<
+  RollupConfig['plugins'],
+  undefined | void | null | false | Promise<unknown> | Array<unknown>
+>;
 
 const nitroModule = {
   name: 'workflow/nitro',
@@ -12,116 +18,44 @@ const nitroModule = {
     const isVercelDeploy =
       !nitro.options.dev && nitro.options.preset === 'vercel';
 
+    // Add transform plugin
+    nitro.hooks.hook('rollup:before', (_nitro: Nitro, config: RollupConfig) => {
+      (config.plugins as Array<unknown>).push(workflowRollupPlugin());
+    });
+
     // Generate functions for vercel build
     if (isVercelDeploy) {
       nitro.hooks.hook('compiled', async () => {
+        console.log('vercel deploy, building for vercel...');
         await new VercelBuilder().build();
+      });
+    }
+
+    if (!isVercelDeploy) {
+      console.log('not vercel deploy, building for local...');
+      const builder = new LocalBuilder();
+      nitro.hooks.hook('build:before', async () => {
+        await builder.build();
       });
     }
   },
 } satisfies NitroModule;
 
 export function workflowPlugin(): Plugin[] {
-  let builder = new LocalBuilder();
+  const builder = new LocalBuilder();
 
   return [
     {
       name: 'workflow:nitro',
       nitro: {
-        setup: (nitro: Nitro) => {
-          if (nitro.options.dev) {
-            console.log('running nitro local builder');
-            builder = new LocalBuilder();
-          }
+        setup: async (nitro: Nitro) => {
           return nitroModule.setup(nitro);
         },
       },
     },
+    workflowRollupPlugin(),
     {
       name: 'workflow:tanstack',
-
-      // TODO: Move this to @workflow/vite or something since this is vite specific
-      // Transform workflow files with SWC
-      async transform(code: string, id: string) {
-        // Only apply the transform if file needs it
-        if (!code.match(/(use step|use workflow)/)) {
-          return null;
-        }
-
-        const isTypeScript = id.endsWith('.ts') || id.endsWith('.tsx');
-        const isTsx = id.endsWith('.tsx');
-
-        const swcPlugin = resolveModulePath('@workflow/swc-plugin', {
-          from: [import.meta.url],
-        });
-
-        // Calculate relative filename for SWC plugin
-        // The SWC plugin uses filename to generate workflowId, so it must be relative
-        const workingDir = process.cwd();
-        const normalizedWorkingDir = workingDir
-          .replace(/\\/g, '/')
-          .replace(/\/$/, '');
-        const normalizedFilepath = id.replace(/\\/g, '/');
-
-        // Windows fix: Use case-insensitive comparison to work around drive letter casing issues
-        const lowerWd = normalizedWorkingDir.toLowerCase();
-        const lowerPath = normalizedFilepath.toLowerCase();
-
-        let relativeFilename: string;
-        if (lowerPath.startsWith(lowerWd + '/')) {
-          // File is under working directory - manually calculate relative path
-          relativeFilename = normalizedFilepath.substring(
-            normalizedWorkingDir.length + 1
-          );
-        } else if (lowerPath === lowerWd) {
-          // File IS the working directory (shouldn't happen)
-          relativeFilename = '.';
-        } else {
-          // Use relative() for files outside working directory
-          relativeFilename = relative(workingDir, id).replace(/\\/g, '/');
-
-          if (relativeFilename.startsWith('../')) {
-            relativeFilename = relativeFilename
-              .split('/')
-              .filter((part) => part !== '..')
-              .join('/');
-          }
-        }
-
-        // Final safety check - ensure we never pass an absolute path to SWC
-        if (
-          relativeFilename.includes(':') ||
-          relativeFilename.startsWith('/')
-        ) {
-          // This should rarely happen, but use filename split as last resort
-          relativeFilename =
-            normalizedFilepath.split('/').pop() || 'unknown.ts';
-        }
-
-        // Transform with SWC
-        const result = await transform(code, {
-          filename: relativeFilename,
-          jsc: {
-            parser: {
-              syntax: isTypeScript ? 'typescript' : 'ecmascript',
-              tsx: isTsx,
-            },
-            target: 'es2022',
-            experimental: {
-              plugins: [[swcPlugin, { mode: 'client' }]],
-            },
-          },
-          minify: false,
-          sourceMaps: true,
-          inlineSourcesContent: true,
-        });
-
-        return {
-          code: result.code,
-          map: result.map ? JSON.parse(result.map) : null,
-        };
-      },
-
       // configResolved() {
       //   if (!process.env.VERCEL_DEPLOYMENT_URL) {
       //     builder = new LocalBuilder();
@@ -187,4 +121,87 @@ export function workflowPlugin(): Plugin[] {
       },
     },
   ];
+}
+
+export function workflowRollupPlugin(): RollupPlugin {
+  return {
+    name: 'workflow:transform',
+    // This transform applies the "use workflow"/"use step"
+    // client transformation
+    async transform(code: string, id: string) {
+      // only apply the transform if file needs it
+      if (!code.match(/(use step|use workflow)/)) {
+        return null;
+      }
+
+      const isTypeScript = id.endsWith('.ts') || id.endsWith('.tsx');
+      const isTsx = id.endsWith('.tsx');
+
+      const swcPlugin = resolveModulePath('@workflow/swc-plugin', {
+        from: [import.meta.url],
+      });
+
+      // Calculate relative filename for SWC plugin
+      // The SWC plugin uses filename to generate workflowId, so it must be relative
+      const workingDir = process.cwd();
+      const normalizedWorkingDir = workingDir
+        .replace(/\\/g, '/')
+        .replace(/\/$/, '');
+      const normalizedFilepath = id.replace(/\\/g, '/');
+
+      // Windows fix: Use case-insensitive comparison to work around drive letter casing issues
+      const lowerWd = normalizedWorkingDir.toLowerCase();
+      const lowerPath = normalizedFilepath.toLowerCase();
+
+      let relativeFilename: string;
+      if (lowerPath.startsWith(lowerWd + '/')) {
+        // File is under working directory - manually calculate relative path
+        relativeFilename = normalizedFilepath.substring(
+          normalizedWorkingDir.length + 1
+        );
+      } else if (lowerPath === lowerWd) {
+        // File IS the working directory (shouldn't happen)
+        relativeFilename = '.';
+      } else {
+        // Use relative() for files outside working directory
+        relativeFilename = relative(workingDir, id).replace(/\\/g, '/');
+
+        if (relativeFilename.startsWith('../')) {
+          relativeFilename = relativeFilename
+            .split('/')
+            .filter((part) => part !== '..')
+            .join('/');
+        }
+      }
+
+      // Final safety check - ensure we never pass an absolute path to SWC
+      if (relativeFilename.includes(':') || relativeFilename.startsWith('/')) {
+        // This should rarely happen, but use filename split as last resort
+        relativeFilename = normalizedFilepath.split('/').pop() || 'unknown.ts';
+      }
+
+      // Transform with SWC
+      const result = await transform(code, {
+        filename: relativeFilename,
+        jsc: {
+          parser: {
+            syntax: isTypeScript ? 'typescript' : 'ecmascript',
+            tsx: isTsx,
+          },
+          target: 'es2022',
+          experimental: {
+            plugins: [[swcPlugin, { mode: 'client' }]],
+          },
+        },
+        minify: false,
+        sourceMaps: true,
+        inlineSourcesContent: true,
+      });
+
+      return {
+        code: result.code,
+        map: result.map ? JSON.parse(result.map) : null,
+      };
+    },
+  };
 }
