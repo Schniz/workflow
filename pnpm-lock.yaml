@@ -651,6 +651,9 @@ importers:
       '@workflow/builders':
         specifier: workspace:*
         version: link:../builders
+      '@workflow/nitro':
+        specifier: workspace:*
+        version: link:../nitro
       '@workflow/swc-plugin':
         specifier: workspace:*
         version: link:../swc-plugin-workflow
