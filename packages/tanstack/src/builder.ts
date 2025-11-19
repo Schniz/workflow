@@ -1,7 +1,12 @@
 import { constants } from 'node:fs';
 import { access, mkdir, stat, writeFile, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { BaseBuilder, type SvelteKitConfig } from '@workflow/builders';
+import {
+  BaseBuilder,
+  createBaseBuilderConfig,
+  VercelBuildOutputAPIBuilder,
+  type TanStackConfig,
+} from '@workflow/builders';
 
 // NOTE: This is the same as SvelteKit/Astro request converter, should merge
 const NORMALIZE_REQUEST_CONVERTER = `
@@ -14,17 +19,31 @@ async function normalizeRequestConverter(request) {
     options.body = await request.arrayBuffer();
   }
   return new Request(request.url, options);
-}
-`;
+} `;
 
-export class TanStackStartBuilder extends BaseBuilder {
-  constructor(config?: Partial<SvelteKitConfig>) {
+const WORKFLOW_ROUTES = [
+  {
+    src: '^/\\.well-known/workflow/v1/flow/?$',
+    dest: '/.well-known/workflow/v1/flow',
+  },
+  {
+    src: '^/\\.well-known/workflow/v1/step/?$',
+    dest: '/.well-known/workflow/v1/step',
+  },
+  {
+    src: '^/\\.well-known/workflow/v1/webhook/([^/]+?)/?$',
+    dest: '/.well-known/workflow/v1/webhook/[token]',
+  },
+];
+
+export class LocalBuilder extends BaseBuilder {
+  constructor(config?: Partial<TanStackConfig>) {
     const workingDir = config?.workingDir || process.cwd();
 
     super({
       ...config,
       dirs: ['src'],
-      buildTarget: 'sveltekit' as const,
+      buildTarget: 'tanstack' as const,
       stepsBundlePath: '', // unused in base
       workflowsBundlePath: '', // unused in base
       webhookBundlePath: '', // unused in base
@@ -273,5 +292,51 @@ export const Route = createFileRoute("/.well-known/workflow/v1/webhook/$token")(
         );
       }
     }
+  }
+}
+
+export class VercelBuilder extends VercelBuildOutputAPIBuilder {
+  constructor() {
+    const workingDir = process.cwd();
+    super({
+      ...createBaseBuilderConfig({
+        workingDir,
+        dirs: ['src/pages', 'src/workflows'],
+      }),
+      buildTarget: 'vercel-build-output-api',
+    });
+  }
+
+  override async build(): Promise<void> {
+    console.log('building for vercel');
+    const configPath = join(
+      this.config.workingDir,
+      '.vercel/output/config.json'
+    );
+
+    // The config output by nitro
+    const config = JSON.parse(await readFile(configPath, 'utf-8'));
+
+    // Find the index right after the "filesystem" handler and "continue: true" routes
+    let insertIndex = config.routes.findIndex(
+      (route: any) => route.handle === 'filesystem'
+    );
+
+    // Move past any routes with "continue: true" (like _astro cache headers)
+    while (
+      insertIndex < config.routes.length - 1 &&
+      config.routes[insertIndex + 1]?.continue === true
+    ) {
+      insertIndex++;
+    }
+
+    // Insert workflow routes right after
+    config.routes.splice(insertIndex + 1, 0, ...WORKFLOW_ROUTES);
+
+    // Bundles workflows for vercel
+    await super.build();
+
+    // Use old nitro config with updated routes
+    await writeFile(configPath, JSON.stringify(config, null, 2));
   }
 }

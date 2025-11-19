@@ -1,9 +1,9 @@
 // import path from "node:path";
 // import fs from "fs-extra";
 
-import { TanStackStartBuilder } from './builder.js';
+import { LocalBuilder } from './builder.js';
 
-const builder = new TanStackStartBuilder();
+const builder = new LocalBuilder();
 
 // This needs to be in the top-level as we need to create these
 // entries before svelte plugin is started or the entries are
