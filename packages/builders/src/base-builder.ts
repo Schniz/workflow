@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, join, relative, resolve } from 'node:path';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import chalk from 'chalk';
 import { parse } from 'comment-json';
@@ -184,14 +184,17 @@ export abstract class BaseBuilder {
     merge?: boolean
   ): Promise<void> {
     try {
+      const prefix = this.config.debugFilePrefix || '';
+      const debugFileName = `${dirname(outfile)}/${prefix}${basename(outfile)}.debug.json`;
+
       let existing = {};
       if (merge) {
         existing = JSON.parse(
-          await readFile(`${outfile}.debug.json`, 'utf8').catch(() => '{}')
+          await readFile(debugFileName, 'utf8').catch(() => '{}')
         );
       }
       await writeFile(
-        `${outfile}.debug.json`,
+        debugFileName,
         JSON.stringify(
           {
             ...existing,
