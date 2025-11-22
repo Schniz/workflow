@@ -48,7 +48,7 @@ export function RelativeTime({
     <Tooltip>
       <TooltipTrigger asChild>
         <span className={`${className} cursor-help border-b border-dotted`}>
-          {relativeTime}
+          Last refreshed: {relativeTime}
         </span>
       </TooltipTrigger>
       <TooltipContent>

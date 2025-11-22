@@ -119,9 +119,9 @@ export function LayoutClient({ children }: LayoutClientProps) {
       enableSystem
       disableTransitionOnChange
     >
-      <div className="min-h-screen px-8 pt-8">
+      <div className="min-h-screen px-6 pt-8">
         <TooltipProvider delayDuration={0}>
-          <div className="max-w-7xl mx-auto">
+          <div>
             <div className="flex items-start justify-between">
               <div className="mb-8 items-center flex justify-between w-full">
                 <Link href="https://useworkflow.dev" target="_blank">

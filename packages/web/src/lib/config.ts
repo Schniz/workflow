@@ -1,6 +1,6 @@
 'use client';
 
-import type { EnvMap } from '@workflow/web-shared/server';
+import type { EnvMap } from '@workflow/web-shared';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
 import type { WorldConfig } from '@/lib/config-world';

@@ -141,9 +141,8 @@ export function RunsTable({ config, onRunClick }: RunsTableProps) {
 
   return (
     <div>
-      <div className="flex items-center justify-between my-4">
-        <h2 className="text-2xl my-2 font-semibold leading-none tracking-tight flex gap-4 items-end">
-          <span className="flex items-center gap-2">Runs</span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-end">
           {lastRefreshTime && (
             <RelativeTime
               date={lastRefreshTime}
@@ -151,7 +150,7 @@ export function RunsTable({ config, onRunClick }: RunsTableProps) {
               type="distance"
             />
           )}
-        </h2>
+        </div>
         <div className="flex items-center gap-4">
           {
             <>
@@ -287,14 +286,14 @@ export function RunsTable({ config, onRunClick }: RunsTableProps) {
         <TableSkeleton />
       ) : !loading && (!data.data || data.data.length === 0) ? (
         <div className="text-center py-8 text-muted-foreground">
-          No workflow runs found.{' '}
+          No workflow runs found. <br />
           <DocsLink href="https://useworkflow.dev/docs/foundations/workflows-and-steps">
             Learn how to create a workflow
           </DocsLink>
         </div>
       ) : (
         <>
-          <Table>
+          <Table className="mt-4">
             <TableHeader>
               <TableRow>
                 <TableHead>Workflow</TableHead>

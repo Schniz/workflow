@@ -1,10 +1,14 @@
 'use client';
 
-import { getErrorMessage, useWorkflowHooks } from '@workflow/web-shared';
-import { fetchEventsByCorrelationId } from '@workflow/web-shared/server';
+import {
+  fetchEventsByCorrelationId,
+  getErrorMessage,
+  useWorkflowHooks,
+} from '@workflow/web-shared';
 import type { Event, Hook } from '@workflow/world';
 import {
   AlertCircle,
+  ArrowUpRight,
   ChevronLeft,
   ChevronRight,
   RefreshCw,
@@ -209,11 +213,8 @@ export function HooksTable({
 
   return (
     <div>
-      <div className="flex items-center justify-between my-4">
-        <h2 className="text-2xl my-2 font-semibold leading-none tracking-tight">
-          Hooks
-        </h2>
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between">
           {lastRefreshTime && (
             <RelativeTime
               date={lastRefreshTime}
@@ -221,6 +222,8 @@ export function HooksTable({
               type="distance"
             />
           )}
+        </div>
+        <div className="flex items-center gap-4">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -245,7 +248,7 @@ export function HooksTable({
         </Alert>
       ) : !loading && (!hooks || hooks.length === 0) ? (
         <div className="text-center py-8 text-muted-foreground">
-          No active hooks found.{' '}
+          No active hooks found. <br />
           <DocsLink href="https://useworkflow.dev/docs/api-reference/workflow/create-hook">
             Learn how to create a hook
           </DocsLink>
