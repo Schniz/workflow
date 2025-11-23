@@ -1,11 +1,11 @@
 'use client';
 
 import { type EnvMap, readStream } from '@workflow/web-shared';
-import { useParams, useSearchParams } from 'next/navigation';
+import { ChevronLeft } from 'lucide-react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { buildUrlWithConfig } from '@/lib/config';
-import { BackLink } from './display-utils/back-link';
 
 interface StreamDetailViewProps {
   env: EnvMap;
@@ -18,9 +18,7 @@ interface Chunk {
 }
 
 export function StreamDetailView({ env, streamId }: StreamDetailViewProps) {
-  const params = useParams();
-  const searchParams = useSearchParams();
-  const runId = params.runId as string | undefined;
+  const router = useRouter();
   const [chunks, setChunks] = useState<Chunk[]>([]);
   const [isLive, setIsLive] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,15 +103,17 @@ export function StreamDetailView({ env, streamId }: StreamDetailViewProps) {
     };
   }, [env, streamId]);
 
-  // Determine back link - if we have a runId, go back to the run detail page, otherwise go home
-  // Note: buildUrlWithConfig expects WorldConfig, but env is EnvMap - this may need fixing
-  const backHref = runId
-    ? buildUrlWithConfig(`/run/${runId}`, env as any, undefined, searchParams)
-    : buildUrlWithConfig('/', env as any, undefined, searchParams);
-
   return (
     <div className="space-y-6">
-      <BackLink href={backHref} />
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => router.back()}
+        className="gap-2"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Back
+      </Button>
 
       <Card>
         <CardHeader>

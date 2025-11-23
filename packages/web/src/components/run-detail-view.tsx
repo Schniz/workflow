@@ -8,7 +8,7 @@ import {
   type WorkflowRun,
   WorkflowTraceViewer,
 } from '@workflow/web-shared';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, ChevronLeft, Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -23,9 +23,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { buildUrlWithConfig, worldConfigToEnvMap } from '@/lib/config';
 import type { WorldConfig } from '@/lib/config-world';
-import { BackLink } from './display-utils/back-link';
 import { CancelButton } from './display-utils/cancel-button';
 import { CopyableText } from './display-utils/copyable-text';
 import { LiveStatus } from './display-utils/live-status';
@@ -211,9 +211,15 @@ export function RunDetailView({
         style={{ height: 'calc(100vh - 7rem)' }}
       >
         <div className="flex-none space-y-6">
-          <BackLink
-            href={buildUrlWithConfig('/', config, undefined, searchParams)}
-          />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.back()}
+            className="gap-2"
+          >
+            <ChevronLeft className="size-4" />
+            Back
+          </Button>
 
           {/* Run Overview Header */}
           <div className="space-y-4 pb-6 border-b">

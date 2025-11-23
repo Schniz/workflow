@@ -111,13 +111,14 @@ export function SettingsSidebar({
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold">Configuration</h2>
-                <button
+                <Button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="p-2 hover:bg-accent rounded-full transition-colors"
+                  variant="outline"
+                  size="icon"
                 >
                   <X className="h-5 w-5" />
-                </button>
+                </Button>
               </div>
 
               <div className="space-y-4">

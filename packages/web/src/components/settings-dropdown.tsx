@@ -49,7 +49,7 @@ export function SettingsDropdown() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" className="rounded-full">
+          <Button variant="outline" size="icon">
             <Settings className="h-[1.2rem] w-[1.2rem]" />
             <span className="sr-only">Settings</span>
           </Button>
