@@ -18,19 +18,19 @@ export function StatusBadge({ status, context, className }: StatusBadgeProps) {
   const getStatusClasses = () => {
     switch (status) {
       case 'running':
-        return 'text-blue-600 dark:text-blue-600 font-semibold';
+        return 'text-blue-600 dark:text-blue-600 font-medium capitalize text-sm';
       case 'completed':
-        return 'text-green-600 dark:text-green-600 font-semibold';
+        return 'text-green-600 dark:text-green-600 font-medium capitalize text-sm';
       case 'failed':
-        return 'text-red-600 dark:text-red-600 font-semibold';
+        return 'text-red-600 dark:text-red-600 font-medium capitalize text-sm';
       case 'cancelled':
-        return 'text-yellow-600 dark:text-yellow-600 font-semibold';
+        return 'text-yellow-600 dark:text-yellow-600 font-medium capitalize text-sm';
       case 'pending':
-        return 'text-gray-600 dark:text-gray-600 font-semibold';
+        return 'text-gray-600 dark:text-gray-600 font-medium capitalize text-sm';
       case 'paused':
-        return 'text-orange-600 dark:text-orange-600 font-semibold';
+        return 'text-orange-600 dark:text-orange-600 font-medium capitalize text-sm';
       default:
-        return 'text-gray-600 dark:text-gray-600 font-semibold';
+        return 'text-gray-600 dark:text-gray-600 font-medium capitalize text-sm';
     }
   };
 

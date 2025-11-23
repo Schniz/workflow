@@ -2,7 +2,7 @@
 
 import { type EnvMap, readStream } from '@workflow/web-shared';
 import { ChevronLeft } from 'lucide-react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
