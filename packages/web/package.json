@@ -27,7 +27,8 @@
   },
   "dependencies": {
     "@radix-ui/react-tabs": "^1.1.13",
-    "next": "15.5.4"
+    "next": "15.5.4",
+    "nuqs": "^2.2.5"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",

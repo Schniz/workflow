@@ -1,34 +1,28 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { HooksTable } from '@/components/hooks-table';
 import { RunsTable } from '@/components/runs-table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { buildUrlWithConfig, useQueryParamConfig } from '@/lib/config';
+import { useHookIdState, useSidebarState, useTabState } from '@/lib/url-state';
 
 export default function Home() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const config = useQueryParamConfig();
+  const [sidebar] = useSidebarState();
+  const [hookId] = useHookIdState();
+  const [tab, setTab] = useTabState();
 
-  const sidebar = searchParams.get('sidebar');
-  const hookId = searchParams.get('hookId') || searchParams.get('hook');
   const selectedHookId = sidebar === 'hook' && hookId ? hookId : undefined;
 
   const handleRunClick = (runId: string, streamId?: string) => {
     if (!streamId) {
-      router.push(
-        buildUrlWithConfig(`/run/${runId}`, config, undefined, searchParams)
-      );
+      router.push(buildUrlWithConfig(`/run/${runId}`, config));
     } else {
       router.push(
-        buildUrlWithConfig(
-          `/run/${runId}/streams/${streamId}`,
-          config,
-          undefined,
-          searchParams
-        )
+        buildUrlWithConfig(`/run/${runId}/streams/${streamId}`, config)
       );
     }
   };
@@ -36,26 +30,19 @@ export default function Home() {
   const handleHookSelect = (hookId: string, runId?: string) => {
     if (hookId) {
       router.push(
-        buildUrlWithConfig(
-          `/run/${runId}`,
-          config,
-          {
-            sidebar: 'hook',
-            hookId,
-          },
-          searchParams
-        )
+        buildUrlWithConfig(`/run/${runId}`, config, {
+          sidebar: 'hook',
+          hookId,
+        })
       );
     } else {
-      router.push(
-        buildUrlWithConfig(`/run/${runId}`, config, undefined, searchParams)
-      );
+      router.push(buildUrlWithConfig(`/run/${runId}`, config));
     }
   };
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="runs" className="w-full">
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="runs">Runs</TabsTrigger>
           <TabsTrigger value="hooks">Hooks</TabsTrigger>
