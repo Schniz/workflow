@@ -1,7 +1,7 @@
 'use client';
 
 import { Monitor, Moon, Settings, Sun } from 'lucide-react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,23 +27,9 @@ function SettingsSidebarDialog({
 }
 
 export function SettingsDropdown() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const currentTheme = searchParams.get('theme') || 'system';
-
-  const updateTheme = (theme: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (theme === 'system') {
-      params.delete('theme');
-    } else {
-      params.set('theme', theme);
-    }
-    const queryString = params.toString();
-    const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
-    router.push(newUrl);
-  };
+  const { theme, setTheme } = useTheme();
+  const currentTheme = theme || 'system';
 
   return (
     <>
@@ -59,7 +45,7 @@ export function SettingsDropdown() {
             <DropdownMenuLabel className="px-0 mb-0">Theme</DropdownMenuLabel>
             <SegmentedControl
               value={currentTheme}
-              onValueChange={updateTheme}
+              onValueChange={setTheme}
               options={[
                 {
                   value: 'system',

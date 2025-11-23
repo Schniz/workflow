@@ -78,20 +78,11 @@ export function useUpdateConfigQueryParams() {
 export function buildUrlWithConfig(
   path: string,
   config: WorldConfig,
-  additionalParams?: Record<string, string>,
-  currentSearchParams?: URLSearchParams
+  additionalParams?: Record<string, string>
 ): string {
   // Serialize config params using nuqs
   const queryString = serializeConfig(config);
   const params = new URLSearchParams(queryString);
-
-  // Preserve theme parameter from current URL if present
-  if (currentSearchParams) {
-    const theme = currentSearchParams.get('theme');
-    if (theme) {
-      params.set('theme', theme);
-    }
-  }
 
   // Add additional params
   if (additionalParams) {

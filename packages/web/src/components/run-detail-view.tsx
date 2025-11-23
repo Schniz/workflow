@@ -9,7 +9,7 @@ import {
   WorkflowTraceViewer,
 } from '@workflow/web-shared';
 import { AlertCircle, ChevronLeft, Loader2 } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -47,7 +47,6 @@ export function RunDetailView({
   selectedId: _selectedId,
 }: RunDetailViewProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [cancelling, setCancelling] = useState(false);
   const [rerunning, setRerunning] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -108,9 +107,7 @@ export function RunDetailView({
         description: `Run ID: ${newRunId}`,
       });
       // Navigate to the new run
-      router.push(
-        buildUrlWithConfig(`/run/${newRunId}`, config, undefined, searchParams)
-      );
+      router.push(buildUrlWithConfig(`/run/${newRunId}`, config));
     } catch (err) {
       console.error('Failed to re-run workflow:', err);
       toast.error('Failed to start new run', {
