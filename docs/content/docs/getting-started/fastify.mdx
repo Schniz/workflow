@@ -57,7 +57,7 @@ export default defineNitroConfig({
 	vercel: { entryFormat: "node" },
 	preset: "vercel",
 	routes: {
-		"/**": { handler: "./src/index.ts" },
+		"/**": "./src/index.ts",
 	},
 });
 ```
@@ -250,4 +250,3 @@ Check the [Deploying](/docs/deploying) section to learn how your workflows can b
 - Learn more about the [Foundations](/docs/foundations).
 - Check [Errors](/docs/errors) if you encounter issues.
 - Explore the [API Reference](/docs/api-reference).
-
