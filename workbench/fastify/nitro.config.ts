@@ -4,6 +4,6 @@ export default defineNitroConfig({
   modules: ['workflow/nitro'],
   vercel: { entryFormat: 'node' },
   routes: {
-    '/api/**': './src/index.ts',
+    '/**': './src/index.ts',
   },
 });
