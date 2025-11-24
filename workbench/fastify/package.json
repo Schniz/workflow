@@ -25,6 +25,7 @@
     "openai": "^6.6.0",
     "typescript": "catalog:",
     "workflow": "workspace:*",
+    "@workflow/world-postgres": "workspace:*",
     "zod": "catalog:"
   }
 }

@@ -1235,6 +1235,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 22.19.0
+      '@workflow/world-postgres':
+        specifier: workspace:*
+        version: link:../../packages/world-postgres
       ai:
         specifier: 'catalog:'
         version: 5.0.76(zod@4.1.11)
