@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import { createReadStream } from 'node:fs';
 import { fromNodeHandler } from 'nitro/h3';
 import { getHookByToken, getRun, resumeHook, start } from 'workflow/api';
 import { hydrateWorkflowArguments } from 'workflow/internal/serialization';
@@ -40,9 +41,7 @@ server.addContentTypeParser(
 );
 
 server.get('/', async (_, reply) => {
-  const stream = fs.createReadStream('./index.html');
-  console.log(stream);
-
+  const stream = createReadStream('./index.html');
   return reply.type('text/html').send(stream);
 });
 
