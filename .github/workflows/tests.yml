@@ -75,6 +75,8 @@ jobs:
             project-id: "prj_p0GIEsfl53L7IwVbosPvi9rPSOYW"
           - name: "express"
             project-id: "prj_cCZjpBy92VRbKHHbarDMhOHtkuIr"
+          - name: "fastify"
+            project-id: "prj_5Yap0VDQ633v998iqQ3L3aQ25Cck"
     env:
       TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
       TURBO_TEAM: ${{ vars.TURBO_TEAM }}
