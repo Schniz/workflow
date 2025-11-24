@@ -39,6 +39,13 @@ server.addContentTypeParser(
   }
 );
 
+server.get('/', async (_, reply) => {
+  const stream = fs.createReadStream('./index.html');
+  console.log(stream);
+
+  return reply.type('text/html').send(stream);
+});
+
 server.post('/api/hook', async (req: any, reply) => {
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
   const { token, data } = body;
