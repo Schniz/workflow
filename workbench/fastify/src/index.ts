@@ -1,5 +1,4 @@
 import Fastify from 'fastify';
-import { createReadStream } from 'node:fs';
 import { getHookByToken, getRun, resumeHook, start } from 'workflow/api';
 import { hydrateWorkflowArguments } from 'workflow/internal/serialization';
 import {
@@ -7,6 +6,8 @@ import {
   WorkflowRunNotCompletedError,
 } from 'workflow/internal/errors';
 import { allWorkflows } from '../_workflows.js';
+import { resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
 
 type JsonResult = { ok: true; value: any } | { ok: false; error: Error };
 const parseJson = (text: string): JsonResult => {
@@ -39,9 +40,9 @@ server.addContentTypeParser(
   }
 );
 
-server.get('/', async (_, reply) => {
-  const stream = createReadStream('./index.html');
-  return reply.type('text/html').send(stream);
+server.get('/', async (req, reply) => {
+  const html = await readFile(resolve('./index.html'), 'utf-8');
+  return reply.type('text/html').send(html);
 });
 
 server.post('/api/hook', async (req: any, reply) => {
