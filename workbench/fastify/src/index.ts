@@ -1,6 +1,5 @@
 import Fastify from 'fastify';
 import { createReadStream } from 'node:fs';
-import { fromNodeHandler } from 'nitro/h3';
 import { getHookByToken, getRun, resumeHook, start } from 'workflow/api';
 import { hydrateWorkflowArguments } from 'workflow/internal/serialization';
 import {
@@ -249,9 +248,6 @@ server.post('/api/test-direct-step-call', async (req: any, reply) => {
 
 await server.ready();
 
-export default fromNodeHandler((req, res) => {
-  return new Promise((resolve) => {
-    res.on('finish', resolve);
-    server.server.emit('request', req, res);
-  });
-});
+export default (req: any, res: any) => {
+  server.server.emit('request', req, res);
+};
