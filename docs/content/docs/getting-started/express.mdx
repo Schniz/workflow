@@ -52,11 +52,13 @@ Create a new file `nitro.config.ts` for your Nitro configuration with module `wo
 ```typescript title="nitro.config.ts" lineNumbers
 import { defineNitroConfig } from 'nitro/config';
 
+import { defineNitroConfig } from "nitro/config";
+
 export default defineNitroConfig({
-  modules: ['workflow/nitro'],
-  vercel: { entryFormat: 'node' },
+  modules: ["workflow/nitro"],
+  vercel: { entryFormat: "node" },
   routes: {
-    '/**': './src/index.ts',
+    "/**": { handler: "./src/index.ts", format: "node" },
   },
 });
 ```
@@ -193,7 +195,6 @@ To invoke your new workflow, we'll create both the Express app and a new API rou
 
 ```typescript title="src/index.ts"
 import express from "express";
-import { fromNodeHandler, type NodeMiddleware } from "nitro/h3";
 import { start } from "workflow/api";
 import { handleUserSignup } from "../workflows/user-signup.js";
 
@@ -206,7 +207,7 @@ app.post("/api/signup", async (req, res) => {
   return res.json({ message: "User signup workflow started" });
 });
 
-export default fromNodeHandler(app as NodeMiddleware);
+export default app;
 ```
 
 This route handler creates a `POST` request endpoint at `/api/signup` that will trigger your workflow.
