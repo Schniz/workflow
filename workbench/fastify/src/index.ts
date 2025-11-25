@@ -135,19 +135,47 @@ server.get('/api/trigger', async (req: any, reply) => {
       const stream = run.getReadable({ namespace });
       const reader = stream.getReader();
 
+      const toFramedChunk = (value: unknown) => {
+        if (typeof value === 'string') {
+          return { data: Buffer.from(value).toString('base64') };
+        }
+        if (value instanceof ArrayBuffer) {
+          return { data: Buffer.from(value).toString('base64') };
+        }
+        if (ArrayBuffer.isView(value)) {
+          const view = value as ArrayBufferView;
+          const buf = Buffer.from(
+            view.buffer,
+            view.byteOffset,
+            view.byteLength
+          );
+          return { data: buf.toString('base64') };
+        }
+        return value;
+      };
+
       reply.type('application/octet-stream');
       // Fastify runs on Node and doesn’t send Web ReadableStreams directly
       // read from the Web reader and write framed chunks to the raw response
       try {
+        let chunkCount = 0;
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const data =
-            value instanceof Uint8Array
-              ? { data: Buffer.from(value).toString('base64') }
-              : value;
-          reply.raw.write(`${JSON.stringify(data)}\n`);
+          if (chunkCount < 4) {
+            console.log(
+              '[fastify output-stream] chunk',
+              chunkCount,
+              value?.constructor?.name,
+              typeof value,
+              value
+            );
+          }
+          chunkCount += 1;
+
+          const framed = toFramedChunk(value);
+          reply.raw.write(`${JSON.stringify(framed)}\n`);
         }
         reply.raw.end();
       } catch (error) {
