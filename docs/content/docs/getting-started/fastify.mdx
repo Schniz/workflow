@@ -57,7 +57,7 @@ export default defineNitroConfig({
 	vercel: { entryFormat: "node" },
 	preset: "vercel",
 	routes: {
-		"/**": "./src/index.ts",
+		"/**": { handler: "./src/index.ts", format: "node" },
 	},
 });
 ```
@@ -182,7 +182,6 @@ To invoke your new workflow, we'll create both the Fastify app and a new API rou
 
 ```typescript title="src/index.ts"
 import Fastify from "fastify";
-import { fromNodeHandler } from "nitro/h3";
 import { start } from "workflow/api";
 import { handleUserSignup } from "../workflows/user-signup.js";
 
@@ -196,13 +195,10 @@ app.post("/api/signup", async (req, reply) => {
 // Wait for Fastify to be ready before handling requests
 await app.ready();
 
-// Expose Fastify app as a Nitro handler
-export default fromNodeHandler((req, res) => {
-	return new Promise((resolve) => {
-		res.on("finish", resolve);
-		app.server.emit("request", req, res);
-	});
-});
+
+export default (req: any, res: any) => {
+  app.server.emit("request", req, res);
+};
 ```
 This route handler creates a `POST` request endpoint at `/api/signup` that will trigger your workflow.
 </Step>
