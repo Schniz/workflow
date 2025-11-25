@@ -29,10 +29,10 @@ Initialize the project:
 npm init --y
 ```
 
-### Install `workflow`, `express` and `nitro`
+### Install `workflow`, `express`, `nitro` and `srvx`
 
 ```package-install
-npm i workflow express nitro rollup
+npm i workflow express nitro srvx
 ```
 
 <Callout>
@@ -56,7 +56,7 @@ export default defineNitroConfig({
   modules: ["workflow/nitro"],
   vercel: { entryFormat: "node" },
   routes: {
-    "/**": { handler: "./src/index.ts", format: "node" },
+    "/**": "./src/index.ts",
   },
 });
 ```
@@ -194,6 +194,7 @@ To invoke your new workflow, we'll create both the Express app and a new API rou
 ```typescript title="src/index.ts"
 import express from "express";
 import { start } from "workflow/api";
+import { toFetchHandler } from 'srvx/node';
 import { handleUserSignup } from "../workflows/user-signup.js";
 
 const app = express();
@@ -205,7 +206,7 @@ app.post("/api/signup", async (req, res) => {
   return res.json({ message: "User signup workflow started" });
 });
 
-export default app;
+export default toFetchHandler(app as any);
 ```
 
 This route handler creates a `POST` request endpoint at `/api/signup` that will trigger your workflow.
