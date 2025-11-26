@@ -22,6 +22,10 @@ Workflow DevKit provides all of these capabilities out of the box. Your agent be
 We start out with a basic Next.js application using the AI SDK's `Agent` class,
 which is a simple wrapper around AI SDK's `streamText` function. It comes with a basic tool for reading web pages.
 
+<Tabs items={['API Route', 'Tools', 'Client']}>
+
+<Tab value="API Route">
+
 ```typescript title="app/api/chat/route.ts" lineNumbers
 import { createUIMessageStreamResponse, Experimental_Agent as Agent, stepCountIs } from 'ai';
 import { tools } from '@/ai/tools';
@@ -44,7 +48,11 @@ export async function POST(req: Request) {
 }
 ```
 
-```typescript title="ai/tools" lineNumbers
+</Tab>
+
+<Tab value="Tools">
+
+```typescript title="ai/tools/index.ts" lineNumbers
 import { tool } from 'ai';
 import { z } from 'zod';
 
@@ -59,6 +67,52 @@ export const tools = {
   }),
 };
 ```
+
+</Tab>
+
+<Tab value="Client">
+
+```typescript title="app/chat.tsx" lineNumbers
+'use client';
+
+import { useChat } from '@ai-sdk/react';
+
+export function Chat() {
+  const { messages, input, handleInputChange, handleSubmit } = useChat({
+    api: '/api/chat',
+  });
+
+  return (
+    <div>
+      {messages.map((m) => (
+        <div key={m.id}>
+          <strong>{m.role}:</strong>
+          {m.parts.map((part, i) => {
+            if (part.type === 'text') {
+              return <span key={i}>{part.text}</span>;
+            }
+            if (part.type === 'tool-invocation') {
+              return <div key={i}>Calling {part.toolInvocation.toolName}...</div>;
+            }
+            return null;
+          })}
+        </div>
+      ))}
+      <form onSubmit={handleSubmit}>
+        <input
+          value={input}
+          onChange={handleInputChange}
+          placeholder="Type a message..."
+        />
+      </form>
+    </div>
+  );
+}
+```
+
+</Tab>
+
+</Tabs>
 
 <Steps>
 
@@ -176,16 +230,20 @@ With `"use step"`:
 <Step>
 ### Stream Progress Updates from Tools
 
-Tools can emit progress updates to the same stream the agent uses. This allows the UI to display tool status:
+Tools can emit progress updates to the same stream the agent uses. This allows the UI to display tool status.
 
-```typescript title="ai/tools/run-command.ts" lineNumbers
+<Tabs items={['Tool', 'Client']}>
+
+<Tab value="Tool">
+
+```typescript title="ai/tools/search-web.ts" lineNumbers
 import { tool } from 'ai';
-import { getWritable } from 'workflow'; // [!code highlight]
+import { getWritable } from 'workflow';
 import { z } from 'zod';
 import type { UIMessageChunk } from 'ai';
 
-async function executeRunCommand(
-  { command }: { command: string },
+async function executeSearch(
+  { url }: { url: string },
   { toolCallId }: { toolCallId: string }
 ) {
   'use step';
@@ -196,31 +254,97 @@ async function executeRunCommand(
   // Emit a progress update // [!code highlight]
   await writer.write({ // [!code highlight]
     id: toolCallId, // [!code highlight]
-    type: 'data-run-command', // [!code highlight]
-    data: { command, status: 'executing' }, // [!code highlight]
+    type: 'data-search-web', // [!code highlight]
+    data: { url, status: 'fetching' }, // [!code highlight]
   }); // [!code highlight]
 
-  const result = await runCommand(command);
+  const response = await fetch(url);
+  const content = await response.text();
 
   await writer.write({ // [!code highlight]
     id: toolCallId, // [!code highlight]
-    type: 'data-run-command', // [!code highlight]
-    data: { command, status: 'done', result }, // [!code highlight]
+    type: 'data-search-web', // [!code highlight]
+    data: { url, status: 'done' }, // [!code highlight]
   }); // [!code highlight]
 
   writer.releaseLock(); // [!code highlight]
 
-  return result;
+  return content;
 }
 
-export const runCommand = tool({
-  description: 'Run a shell command',
-  inputSchema: z.object({ command: z.string() }),
-  execute: executeRunCommand,
+export const searchWeb = tool({
+  description: 'Read a web page and return the content',
+  inputSchema: z.object({ url: z.string() }),
+  execute: executeSearch,
 });
 ```
 
-The UI can handle these data chunks to display real-time progress.
+</Tab>
+
+<Tab value="Client">
+
+Handle the `data-search-web` chunks in your client to display progress:
+
+```typescript title="app/chat.tsx" lineNumbers
+'use client';
+
+import { useChat } from '@ai-sdk/react';
+import type { DataUIPart } from 'ai';
+
+type DataPart =
+  | { type: 'data-search-web'; data: { url: string; status: string } };
+
+export function Chat() {
+  const [toolStatus, setToolStatus] = useState<Record<string, DataPart['data']>>({});
+
+  const { messages, input, handleInputChange, handleSubmit } = useChat({
+    api: '/api/chat',
+    onData: (part: DataUIPart<DataPart>) => { // [!code highlight]
+      if (part.type === 'data-search-web') { // [!code highlight]
+        setToolStatus((prev) => ({ ...prev, [part.id]: part.data })); // [!code highlight]
+      } // [!code highlight]
+    }, // [!code highlight]
+  });
+
+  return (
+    <div>
+      {messages.map((m) => (
+        <div key={m.id}>
+          <strong>{m.role}:</strong>
+          {m.parts.map((part, i) => {
+            if (part.type === 'text') {
+              return <span key={i}>{part.text}</span>;
+            }
+            if (part.type === 'tool-invocation') {
+              const status = toolStatus[part.toolInvocation.toolCallId]; // [!code highlight]
+              return (
+                <div key={i}>
+                  {status?.status === 'fetching' // [!code highlight]
+                    ? `Fetching ${status.url}...` // [!code highlight]
+                    : `Called ${part.toolInvocation.toolName}`} // [!code highlight]
+                </div>
+              );
+            }
+            return null;
+          })}
+        </div>
+      ))}
+      <form onSubmit={handleSubmit}>
+        <input
+          value={input}
+          onChange={handleInputChange}
+          placeholder="Type a message..."
+        />
+      </form>
+    </div>
+  );
+}
+```
+
+</Tab>
+
+</Tabs>
+
 </Step>
 
 </Steps>
@@ -255,6 +379,180 @@ Now that you have a basic durable agent, explore these additional capabilities:
     Implement approval workflows that wait for human input.
   </Card>
 </Cards>
+
+## Complete Example
+
+Here is the complete code for the durable agent after all the steps above:
+
+<Tabs items={['API Route', 'Workflow', 'Tools', 'Client']}>
+
+<Tab value="API Route">
+
+```typescript title="app/api/chat/route.ts" lineNumbers
+import { createUIMessageStreamResponse, convertToModelMessages } from 'ai';
+import { start } from 'workflow/api';
+import { chatWorkflow } from './workflow';
+
+export async function POST(req: Request) {
+  const { messages, modelId } = await req.json();
+  const modelMessages = convertToModelMessages(messages);
+
+  const run = await start(chatWorkflow, [{ messages: modelMessages, modelId }]);
+
+  return createUIMessageStreamResponse({
+    stream: run.readable,
+  });
+}
+```
+
+</Tab>
+
+<Tab value="Workflow">
+
+```typescript title="app/api/chat/workflow.ts" lineNumbers
+import { DurableAgent } from '@workflow/ai/agent';
+import { getWritable } from 'workflow';
+import { stepCountIs } from 'ai';
+import { tools } from '@/ai/tools';
+import type { ModelMessage, UIMessageChunk } from 'ai';
+
+export async function chatWorkflow({
+  messages,
+  modelId,
+}: {
+  messages: ModelMessage[];
+  modelId: string;
+}) {
+  'use workflow';
+
+  const writable = getWritable<UIMessageChunk>();
+
+  const agent = new DurableAgent({
+    model: modelId,
+    system: 'You are a helpful assistant.',
+    tools,
+  });
+
+  await agent.stream({
+    messages,
+    writable,
+    stopWhen: stepCountIs(20),
+  });
+}
+```
+
+</Tab>
+
+<Tab value="Tools">
+
+```typescript title="ai/tools/index.ts" lineNumbers
+import { tool } from 'ai';
+import { getWritable } from 'workflow';
+import { z } from 'zod';
+import type { UIMessageChunk } from 'ai';
+
+async function executeSearch(
+  { url }: { url: string },
+  { toolCallId }: { toolCallId: string }
+) {
+  'use step';
+
+  const writable = getWritable<UIMessageChunk>();
+  const writer = writable.getWriter();
+
+  await writer.write({
+    id: toolCallId,
+    type: 'data-search-web',
+    data: { url, status: 'fetching' },
+  });
+
+  const response = await fetch(url);
+  const content = await response.text();
+
+  await writer.write({
+    id: toolCallId,
+    type: 'data-search-web',
+    data: { url, status: 'done' },
+  });
+
+  writer.releaseLock();
+
+  return content;
+}
+
+export const tools = {
+  searchWeb: tool({
+    description: 'Read a web page and return the content',
+    inputSchema: z.object({ url: z.string() }),
+    execute: executeSearch,
+  }),
+};
+```
+
+</Tab>
+
+<Tab value="Client">
+
+```typescript title="app/chat.tsx" lineNumbers
+'use client';
+
+import { useChat } from '@ai-sdk/react';
+import { useState } from 'react';
+import type { DataUIPart } from 'ai';
+
+type DataPart =
+  | { type: 'data-search-web'; data: { url: string; status: string } };
+
+export function Chat() {
+  const [toolStatus, setToolStatus] = useState<Record<string, DataPart['data']>>({});
+
+  const { messages, input, handleInputChange, handleSubmit } = useChat({
+    api: '/api/chat',
+    onData: (part: DataUIPart<DataPart>) => {
+      if (part.type === 'data-search-web') {
+        setToolStatus((prev) => ({ ...prev, [part.id]: part.data }));
+      }
+    },
+  });
+
+  return (
+    <div>
+      {messages.map((m) => (
+        <div key={m.id}>
+          <strong>{m.role}:</strong>
+          {m.parts.map((part, i) => {
+            if (part.type === 'text') {
+              return <span key={i}>{part.text}</span>;
+            }
+            if (part.type === 'tool-invocation') {
+              const status = toolStatus[part.toolInvocation.toolCallId];
+              return (
+                <div key={i}>
+                  {status?.status === 'fetching'
+                    ? `Fetching ${status.url}...`
+                    : `Called ${part.toolInvocation.toolName}`}
+                </div>
+              );
+            }
+            return null;
+          })}
+        </div>
+      ))}
+      <form onSubmit={handleSubmit}>
+        <input
+          value={input}
+          onChange={handleInputChange}
+          placeholder="Type a message..."
+        />
+      </form>
+    </div>
+  );
+}
+```
+
+</Tab>
+
+</Tabs>
 
 ## Related Documentation
 
