@@ -559,3 +559,18 @@ export async function closureVariableWorkflow(baseValue: number) {
   const output = await calculate();
   return output;
 }
+
+//////////////////////////////////////////////////////////
+
+// Test workflow that fails after max retries
+async function stepThatAlwaysFails() {
+  'use step';
+  throw new Error('This step always fails');
+}
+
+export async function stepMaxRetriesWorkflow() {
+  'use workflow';
+  // This step will fail 3 times (default maxRetries) and the workflow should be marked as failed
+  await stepThatAlwaysFails();
+  return 'never reached';
+}

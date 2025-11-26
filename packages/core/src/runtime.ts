@@ -775,7 +775,8 @@ export const stepEntrypoint =
               console.error(
                 `[Workflows] "${workflowRunId}" - Encountered \`FatalError\` while executing step "${stepName}":\n  > ${stackLines.join('\n    > ')}\n\nBubbling up error to parent workflow`
               );
-              // Fatal error - store the error in the event log and re-invoke the workflow
+              const errorMessage = err.message || String(err);
+              // Fatal error - store the error in the event log and mark workflow as failed
               await world.events.create(workflowRunId, {
                 eventType: 'step_failed',
                 correlationId: stepId,
@@ -788,16 +789,27 @@ export const stepEntrypoint =
               await world.steps.update(workflowRunId, stepId, {
                 status: 'failed',
                 error: {
-                  message: err.message || String(err),
+                  message: errorMessage,
                   stack: errorStack,
                   // TODO: include error codes when we define them
+                },
+              });
+              await world.runs.update(workflowRunId, {
+                status: 'failed',
+                error: {
+                  message: errorMessage,
+                  stack: errorStack,
                 },
               });
 
               span?.setAttributes({
                 ...Attribute.StepStatus('failed'),
                 ...Attribute.StepFatalError(true),
+                ...Attribute.WorkflowRunStatus('failed'),
               });
+
+              // Don't queue the workflow again - it has failed
+              return;
             } else {
               const maxRetries = stepFn.maxRetries ?? 3;
 
@@ -807,7 +819,7 @@ export const stepEntrypoint =
               });
 
               if (attempt >= maxRetries) {
-                // Max retries reached
+                // Max retries reached - mark workflow as failed
                 const errorStack = getErrorStack(err);
                 const stackLines = errorStack.split('\n').slice(0, 4);
                 console.error(
@@ -830,11 +842,22 @@ export const stepEntrypoint =
                     stack: errorStack,
                   },
                 });
+                await world.runs.update(workflowRunId, {
+                  status: 'failed',
+                  error: {
+                    message: errorMessage,
+                    stack: errorStack,
+                  },
+                });
 
                 span?.setAttributes({
                   ...Attribute.StepStatus('failed'),
                   ...Attribute.StepRetryExhausted(true),
+                  ...Attribute.WorkflowRunStatus('failed'),
                 });
+
+                // Don't queue the workflow again - it has failed
+                return;
               } else {
                 // Not at max retries yet - log as a retryable error
                 if (RetryableError.is(err)) {
