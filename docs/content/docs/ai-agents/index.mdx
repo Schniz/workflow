@@ -2,21 +2,20 @@
 title: Building Durable AI Agents
 ---
 
-AI agents are built on the primitive of LLM and tool-call loops, often with additional processes for data fetching, resource provisioning, or reacting to external events. Workflow DevKit allows you to designate these loops as stateful, resumable workflows, with LLM calls, tool calls, and other async operations as individual, retryable, observable steps.
+AI agents are built on the primitive of LLM and tool-call loops, often with additional processes for data fetching, resource provisioning, or reacting to external events. Workflow DevKit makes your agents production-ready, by turning your agents into durable, resumable workflows, and managing your LLM calls, tool executions, and other async operations as retryable and observable steps.
 
 This guide walks through converting a basic AI SDK agent into a durable agent using Workflow DevKit.
 
 ## Why Durable Agents?
 
-Building production-ready AI agents typically requires solving several challenges:
+Aside from the usual challenges of getting your long-running tasks to be production-ready, building mature AI agents typically requires solving several additional **challenges**:
 
-- **Durability**: Splitting calls into async jobs, managing associated workers, queuing, and data persistence
-- **Reliability**: Error handling, retries, and recovery from partial failures
-- **Observability**: Storing messages and emitting traces, often using external services for observability
-- **Resumability**: Repeatedly persisting and loading state from a database, storing streams in a separate service, and managing stream reconnects
-- **Long-running operations and human approval loops**: Wiring up queues, async workers, and connecting state to your existing API and interface
+- **Durability**: Persisting chat sessions and turning all LLM and tool calls into separate async jobs, with workers, queues, and state management, which repeatedly save and re-load state from a database.
+- **Observability**: Using services to collect traces and metrics, separately storing your messages and user history, and then combining them to get a complete picture of your agent's behavior.
+- **Resumability**: Separately from storing messages for replayability, most LLM calls are streams, and recovering from a call failure without re-doing the entire call requires piping and storing streams separately from your messages, usually in a separate service.
+- **Human-in-the-loop**: Your client, API, and async job orchestration need to work together to create, track, route to, and display human approval requests, or similar webhook operations. If your stack is disjointed, this simple feature becomes a major orchestration challenge.
 
-Workflow DevKit provides these capabilities out of the box. Your agent becomes a workflow, your tools become steps, and the framework handles interplay with your existing infrastructure.
+Workflow DevKit provides all of these capabilities out of the box. Your agent becomes a workflow, your tools become steps, and the framework handles interplay with your existing infrastructure.
 
 ## Getting Started
 
