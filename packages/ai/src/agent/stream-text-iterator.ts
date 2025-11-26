@@ -7,9 +7,9 @@ import type {
 import type {
   StepResult,
   StreamTextOnStepFinishCallback,
-  ToolSet,
   UIMessageChunk,
 } from 'ai';
+import type { DurableAgentToolSet } from './durable-agent.js';
 import { doStreamStep, type ModelStopCondition } from './do-stream-step.js';
 import { toolsToModelTools } from './tools-to-model-tools.js';
 
@@ -24,7 +24,7 @@ export async function* streamTextIterator({
   onStepFinish,
 }: {
   prompt: LanguageModelV2Prompt;
-  tools: ToolSet;
+  tools: DurableAgentToolSet;
   writable: WritableStream<UIMessageChunk>;
   model: string | (() => Promise<LanguageModelV2>);
   stopConditions?: ModelStopCondition[] | ModelStopCondition;
@@ -42,7 +42,7 @@ export async function* streamTextIterator({
   let isFirstIteration = true;
 
   while (!done) {
-    const { toolCalls, finish, step } = await doStreamStep(
+    const { toolCalls, providerToolResults, finish, step } = await doStreamStep(
       conversationPrompt,
       model,
       writable,
@@ -66,14 +66,24 @@ export async function* streamTextIterator({
         })),
       });
 
-      // Yield the tool calls and wait for results
-      const toolResults = yield toolCalls;
+      // Filter to only client-executed tool calls (not provider-executed)
+      const clientToolCalls = toolCalls.filter(
+        (toolCall) => !toolCall.providerExecuted
+      );
 
-      await writeToolOutputToUI(writable, toolResults);
+      // Get client tool results by yielding only the client tool calls
+      let clientToolResults: LanguageModelV2ToolResultPart[] = [];
+      if (clientToolCalls.length > 0) {
+        clientToolResults = yield clientToolCalls;
+        await writeToolOutputToUI(writable, clientToolResults);
+      }
+
+      // Merge provider tool results with client tool results
+      const allToolResults = [...providerToolResults, ...clientToolResults];
 
       conversationPrompt.push({
         role: 'tool',
-        content: toolResults,
+        content: allToolResults,
       });
 
       if (stopConditions) {

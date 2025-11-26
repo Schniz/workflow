@@ -4,6 +4,7 @@ import type {
   LanguageModelV2Prompt,
   LanguageModelV2StreamPart,
   LanguageModelV2ToolCall,
+  LanguageModelV2ToolResultPart,
 } from '@ai-sdk/provider';
 import {
   gateway,
@@ -38,6 +39,7 @@ export async function doStreamStep(
       'Invalid "model initialization" argument. Must be a string or a function that returns a LanguageModelV2 instance.'
     );
   }
+  console.log('doStreamStep tools', tools);
 
   const result = await model.doStream({
     prompt: conversationPrompt,
@@ -46,16 +48,33 @@ export async function doStreamStep(
 
   let finish: FinishPart | undefined;
   const toolCalls: LanguageModelV2ToolCall[] = [];
+  const providerToolResults: LanguageModelV2ToolResultPart[] = [];
   const chunks: LanguageModelV2StreamPart[] = [];
 
   await result.stream
     .pipeThrough(
       new TransformStream({
         transform(chunk, controller) {
+          console.log('doStreamStep chunk', chunk);
           if (chunk.type === 'tool-call') {
             toolCalls.push({
               ...chunk,
               input: chunk.input || '{}',
+            });
+          } else if (chunk.type === 'tool-result') {
+            // Capture provider-executed tool results from the stream
+            // Convert from stream result format (result: unknown) to prompt format (output: LanguageModelV2ToolResultOutput)
+            providerToolResults.push({
+              type: 'tool-result',
+              toolCallId: chunk.toolCallId,
+              toolName: chunk.toolName,
+              output: {
+                type: 'text',
+                value:
+                  typeof chunk.result === 'string'
+                    ? chunk.result
+                    : JSON.stringify(chunk.result),
+              },
             });
           } else if (chunk.type === 'finish') {
             finish = chunk;
@@ -380,7 +399,7 @@ export async function doStreamStep(
   // }
 
   const step = chunksToStep(chunks, toolCalls, conversationPrompt, finish);
-  return { toolCalls, finish, step };
+  return { toolCalls, providerToolResults, finish, step };
 }
 
 // This is a stand-in for logic in the AI-SDK streamText code which aggregates
