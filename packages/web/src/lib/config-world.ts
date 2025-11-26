@@ -23,9 +23,9 @@ export async function validateWorldConfig(
   config: WorldConfig
 ): Promise<ValidationError[]> {
   const errors: ValidationError[] = [];
-  const backend = config.backend || 'embedded';
+  const backend = config.backend || 'local';
 
-  if (backend === 'embedded') {
+  if (backend === 'local') {
     // Check if data directory exists
     if (config.dataDir) {
       const resolvedPath = resolve(config.dataDir);

@@ -30,8 +30,8 @@ export function SettingsSidebar() {
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [isValidating, setIsValidating] = useState(false);
 
-  const backend = localConfig.backend || 'embedded';
-  const isEmbedded = backend === 'embedded';
+  const backend = localConfig.backend || 'local';
+  const isLocal = backend === 'local';
 
   // Update local config when query params change
   useEffect(() => {
@@ -112,7 +112,7 @@ export function SettingsSidebar() {
                 <div className="space-y-2">
                   <Label htmlFor="backend">Backend</Label>
                   <Select
-                    value={localConfig.backend || 'embedded'}
+                    value={localConfig.backend || 'local'}
                     onValueChange={(value) =>
                       handleInputChange('backend', value)
                     }
@@ -121,13 +121,13 @@ export function SettingsSidebar() {
                       <SelectValue placeholder="Select backend" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="embedded">Embedded</SelectItem>
+                      <SelectItem value="local">Local</SelectItem>
                       <SelectItem value="vercel">Vercel</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {isEmbedded && (
+                {isLocal && (
                   <>
                     <div className="space-y-2">
                       <Label htmlFor="port">Port</Label>
@@ -175,7 +175,7 @@ export function SettingsSidebar() {
                   </>
                 )}
 
-                {!isEmbedded && (
+                {!isLocal && (
                   <>
                     <div className="space-y-2">
                       <Label htmlFor="env">Environment</Label>

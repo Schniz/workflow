@@ -266,7 +266,7 @@
 ### Patch Changes
 
 - 66332f2: Rename vercel-static builder to standalone
-- dbf2207: Fix --backend flag not finding world when using embedded world package name explicitly
+- dbf2207: Fix --backend flag not finding world when using local world package name explicitly
 - Updated dependencies [dbf2207]
 - Updated dependencies [eadf588]
   - @workflow/web@4.0.1-beta.4
