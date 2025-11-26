@@ -7,11 +7,13 @@ import type {
 import type {
   StepResult,
   StreamTextOnStepFinishCallback,
-  ToolSet,
   UIMessageChunk,
 } from 'ai';
 import { doStreamStep, type ModelStopCondition } from './do-stream-step.js';
-import type { PrepareStepCallback } from './durable-agent.js';
+import type {
+  DurableAgentToolSet,
+  PrepareStepCallback,
+} from './durable-agent.js';
 import { toolsToModelTools } from './tools-to-model-tools.js';
 
 /**
@@ -37,7 +39,7 @@ export async function* streamTextIterator({
   prepareStep,
 }: {
   prompt: LanguageModelV2Prompt;
-  tools: ToolSet;
+  tools: DurableAgentToolSet;
   writable: WritableStream<UIMessageChunk>;
   model: string | (() => Promise<LanguageModelV2>);
   stopConditions?: ModelStopCondition[] | ModelStopCondition;
@@ -76,7 +78,7 @@ export async function* streamTextIterator({
       }
     }
 
-    const { toolCalls, finish, step } = await doStreamStep(
+    const { toolCalls, providerToolResults, finish, step } = await doStreamStep(
       conversationPrompt,
       currentModel,
       writable,
@@ -101,15 +103,29 @@ export async function* streamTextIterator({
         })),
       });
 
-      // Yield the tool calls along with the current conversation messages
-      // This allows executeTool to pass the conversation context to tool execute functions
-      const toolResults = yield { toolCalls, messages: conversationPrompt };
+      // Filter to only client-executed tool calls (not provider-executed)
+      const clientToolCalls = toolCalls.filter(
+        (toolCall) => !toolCall.providerExecuted
+      );
 
-      await writeToolOutputToUI(writable, toolResults);
+      // Get client tool results by yielding only the client tool calls
+      let clientToolResults: LanguageModelV2ToolResultPart[] = [];
+      if (clientToolCalls.length > 0) {
+        // Yield the tool calls along with the current conversation messages
+        // This allows executeTool to pass the conversation context to tool execute functions
+        clientToolResults = yield {
+          toolCalls: clientToolCalls,
+          messages: conversationPrompt,
+        };
+        await writeToolOutputToUI(writable, clientToolResults);
+      }
+
+      // Merge provider tool results with client tool results
+      const allToolResults = [...providerToolResults, ...clientToolResults];
 
       conversationPrompt.push({
         role: 'tool',
-        content: toolResults,
+        content: allToolResults,
       });
 
       if (stopConditions) {

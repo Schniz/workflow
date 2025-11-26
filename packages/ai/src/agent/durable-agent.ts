@@ -16,6 +16,18 @@ import {
 import { convertToLanguageModelPrompt, standardizePrompt } from 'ai/internal';
 import { FatalError } from 'workflow';
 import { streamTextIterator } from './stream-text-iterator.js';
+import type { ProviderDefinedTool } from './tools-to-model-tools.js';
+
+// Re-export for convenience
+export type { ProviderDefinedTool } from './tools-to-model-tools.js';
+
+/**
+ * Extended tool set that supports both user-defined and provider-defined tools.
+ */
+export type DurableAgentToolSet = Record<
+  string,
+  ToolSet[string] | ProviderDefinedTool
+>;
 
 /**
  * Information passed to the prepareStep callback.
@@ -84,8 +96,12 @@ export interface DurableAgentOptions {
    * A set of tools available to the agent.
    * Tools can be implemented as workflow steps for automatic retries and persistence,
    * or as regular workflow-level logic using core library features like sleep() and Hooks.
+   *
+   * Supports both user-defined tools (with `execute` functions) and provider-defined tools
+   * (with `type: 'provider-defined'`). Provider-defined tools are executed by the model
+   * provider directly (e.g., Anthropic's computer use tools).
    */
-  tools?: ToolSet;
+  tools?: DurableAgentToolSet;
 
   /**
    * Optional system prompt to guide the agent's behavior.
@@ -194,7 +210,7 @@ export interface DurableAgentStreamOptions<TTools extends ToolSet = ToolSet> {
  */
 export class DurableAgent {
   private model: string | (() => Promise<LanguageModelV2>);
-  private tools: ToolSet;
+  private tools: DurableAgentToolSet;
   private system?: string;
 
   constructor(options: DurableAgentOptions) {
@@ -283,17 +299,39 @@ async function closeStream(
   }
 }
 
+function isProviderDefinedTool(
+  tool: DurableAgentToolSet[string]
+): tool is ProviderDefinedTool {
+  return (
+    typeof tool === 'object' &&
+    tool !== null &&
+    'type' in tool &&
+    tool.type === 'provider-defined'
+  );
+}
+
 async function executeTool(
   toolCall: LanguageModelV2ToolCall,
-  tools: ToolSet,
+  tools: DurableAgentToolSet,
   messages: LanguageModelV2Prompt
 ): Promise<LanguageModelV2ToolResultPart> {
   const tool = tools[toolCall.toolName];
   if (!tool) throw new Error(`Tool "${toolCall.toolName}" not found`);
-  if (typeof tool.execute !== 'function')
+
+  // Provider-defined tools should not reach here as they are filtered out earlier
+  // and executed by the provider. This is a safety check.
+  if (isProviderDefinedTool(tool)) {
+    throw new Error(
+      `Tool "${toolCall.toolName}" is a provider-defined tool and should be executed by the provider, not the client`
+    );
+  }
+
+  if (typeof tool.execute !== 'function') {
     throw new Error(
       `Tool "${toolCall.toolName}" does not have an execute function`
     );
+  }
+
   const schema = asSchema(tool.inputSchema);
   const input = await schema.validate?.(JSON.parse(toolCall.input || '{}'));
   if (!input?.success) {
