@@ -3,14 +3,15 @@ import type {
   LanguageModelV2Prompt,
   LanguageModelV2ToolCall,
   LanguageModelV2ToolResultPart,
+  SharedV2ProviderOptions,
 } from '@ai-sdk/provider';
 import type {
   StepResult,
   StreamTextOnStepFinishCallback,
   UIMessageChunk,
 } from 'ai';
-import type { DurableAgentToolSet } from './durable-agent.js';
 import { doStreamStep, type ModelStopCondition } from './do-stream-step.js';
+import type { DurableAgentToolSet } from './durable-agent.js';
 import { toolsToModelTools } from './tools-to-model-tools.js';
 
 // This runs in the workflow context
@@ -19,6 +20,7 @@ export async function* streamTextIterator({
   tools = {},
   writable,
   model,
+  providerOptions,
   stopConditions,
   sendStart = true,
   onStepFinish,
@@ -27,6 +29,7 @@ export async function* streamTextIterator({
   tools: DurableAgentToolSet;
   writable: WritableStream<UIMessageChunk>;
   model: string | (() => Promise<LanguageModelV2>);
+  providerOptions?: SharedV2ProviderOptions;
   stopConditions?: ModelStopCondition[] | ModelStopCondition;
   sendStart?: boolean;
   onStepFinish?: StreamTextOnStepFinishCallback<any>;
@@ -48,6 +51,7 @@ export async function* streamTextIterator({
       writable,
       toolsToModelTools(tools),
       {
+        providerOptions,
         sendStart: sendStart && isFirstIteration,
       }
     );

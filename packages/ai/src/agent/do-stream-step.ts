@@ -5,6 +5,7 @@ import type {
   LanguageModelV2StreamPart,
   LanguageModelV2ToolCall,
   LanguageModelV2ToolResultPart,
+  SharedV2ProviderOptions,
 } from '@ai-sdk/provider';
 import {
   gateway,
@@ -24,6 +25,7 @@ export async function doStreamStep(
   writable: WritableStream<UIMessageChunk>,
   tools?: LanguageModelV2CallOptions['tools'],
   options?: {
+    providerOptions?: SharedV2ProviderOptions;
     sendStart?: boolean;
   }
 ) {
@@ -44,6 +46,7 @@ export async function doStreamStep(
   const result = await model.doStream({
     prompt: conversationPrompt,
     tools,
+    providerOptions: options?.providerOptions,
   });
 
   let finish: FinishPart | undefined;

@@ -2,6 +2,7 @@ import type {
   LanguageModelV2,
   LanguageModelV2ToolCall,
   LanguageModelV2ToolResultPart,
+  SharedV2ProviderOptions,
 } from '@ai-sdk/provider';
 import {
   asSchema,
@@ -38,6 +39,13 @@ export interface DurableAgentOptions {
    * or a step function that returns a `LanguageModelV2` instance.
    */
   model: string | (() => Promise<LanguageModelV2>);
+
+  /**
+   * Additional provider-specific options. They are passed through
+   * to the provider from the AI SDK and enable provider-specific
+   * functionality that can be fully encapsulated in the provider.
+   */
+  providerOptions?: SharedV2ProviderOptions;
 
   /**
    * A set of tools available to the agent.
@@ -137,11 +145,13 @@ export interface DurableAgentStreamOptions {
  */
 export class DurableAgent {
   private model: string | (() => Promise<LanguageModelV2>);
+  private providerOptions?: SharedV2ProviderOptions;
   private tools: DurableAgentToolSet;
   private system?: string;
 
   constructor(options: DurableAgentOptions) {
     this.model = options.model;
+    this.providerOptions = options.providerOptions;
     this.tools = options.tools ?? {};
     this.system = options.system;
   }
@@ -164,6 +174,7 @@ export class DurableAgent {
 
     const iterator = streamTextIterator({
       model: this.model,
+      providerOptions: this.providerOptions,
       tools: this.tools,
       writable: options.writable,
       prompt: modelPrompt,
