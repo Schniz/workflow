@@ -1,18 +1,72 @@
 import type {
   LanguageModelV2,
+  LanguageModelV2Prompt,
   LanguageModelV2ToolCall,
   LanguageModelV2ToolResultPart,
 } from '@ai-sdk/provider';
 import {
   asSchema,
   type ModelMessage,
+  type StepResult,
   type StopCondition,
+  type StreamTextOnStepFinishCallback,
   type ToolSet,
   type UIMessageChunk,
 } from 'ai';
 import { convertToLanguageModelPrompt, standardizePrompt } from 'ai/internal';
 import { FatalError } from 'workflow';
 import { streamTextIterator } from './stream-text-iterator.js';
+
+/**
+ * Information passed to the prepareStep callback.
+ */
+export interface PrepareStepInfo<TTools extends ToolSet = ToolSet> {
+  /**
+   * The current model configuration (string or function).
+   */
+  model: string | (() => Promise<LanguageModelV2>);
+
+  /**
+   * The current step number (0-indexed).
+   */
+  stepNumber: number;
+
+  /**
+   * All previous steps with their results.
+   */
+  steps: StepResult<TTools>[];
+
+  /**
+   * The messages that will be sent to the model.
+   * This is the LanguageModelV2Prompt format used internally.
+   */
+  messages: LanguageModelV2Prompt;
+}
+
+/**
+ * Return type from the prepareStep callback.
+ * All properties are optional - only return the ones you want to override.
+ */
+export interface PrepareStepResult {
+  /**
+   * Override the model for this step.
+   */
+  model?: string | (() => Promise<LanguageModelV2>);
+
+  /**
+   * Override the messages for this step.
+   * Use this for context management or message injection.
+   */
+  messages?: LanguageModelV2Prompt;
+}
+
+/**
+ * Callback function called before each step in the agent loop.
+ * Use this to modify settings, manage context, or implement dynamic behavior.
+ */
+export type PrepareStepCallback<TTools extends ToolSet = ToolSet> = (
+  info: PrepareStepInfo<TTools>
+) => PrepareStepResult | Promise<PrepareStepResult>;
 
 /**
  * Configuration options for creating a {@link DurableAgent} instance.
@@ -42,7 +96,7 @@ export interface DurableAgentOptions {
 /**
  * Options for the {@link DurableAgent.stream} method.
  */
-export interface DurableAgentStreamOptions {
+export interface DurableAgentStreamOptions<TTools extends ToolSet = ToolSet> {
   /**
    * The conversation messages to process. Should follow the AI SDK's ModelMessage format.
    */
@@ -83,6 +137,31 @@ export interface DurableAgentStreamOptions {
   stopWhen?:
     | StopCondition<NoInfer<ToolSet>>
     | Array<StopCondition<NoInfer<ToolSet>>>;
+
+  /**
+   * Callback function to be called after each step completes.
+   */
+  onStepFinish?: StreamTextOnStepFinishCallback<any>;
+
+  /**
+   * Callback function called before each step in the agent loop.
+   * Use this to modify settings, manage context, or inject messages dynamically.
+   *
+   * @example
+   * ```typescript
+   * prepareStep: async ({ messages, stepNumber }) => {
+   *   // Inject messages from a queue
+   *   const queuedMessages = await getQueuedMessages();
+   *   if (queuedMessages.length > 0) {
+   *     return {
+   *       messages: [...messages, ...queuedMessages],
+   *     };
+   *   }
+   *   return {};
+   * }
+   * ```
+   */
+  prepareStep?: PrepareStepCallback<TTools>;
 }
 
 /**
@@ -128,7 +207,9 @@ export class DurableAgent {
     throw new Error('Not implemented');
   }
 
-  async stream(options: DurableAgentStreamOptions) {
+  async stream<TTools extends ToolSet = ToolSet>(
+    options: DurableAgentStreamOptions<TTools>
+  ) {
     const prompt = await standardizePrompt({
       system: options.system || this.system,
       messages: options.messages,
@@ -147,15 +228,17 @@ export class DurableAgent {
       prompt: modelPrompt,
       stopConditions: options.stopWhen,
       sendStart: options.sendStart ?? true,
+      onStepFinish: options.onStepFinish,
+      prepareStep: options.prepareStep,
     });
 
     let result = await iterator.next();
     while (!result.done) {
-      const toolCalls = result.value;
+      const { toolCalls, messages } = result.value;
       const toolResults = await Promise.all(
         toolCalls.map(
           (toolCall): Promise<LanguageModelV2ToolResultPart> =>
-            executeTool(toolCall, this.tools)
+            executeTool(toolCall, this.tools, messages)
         )
       );
       result = await iterator.next(toolResults);
@@ -202,7 +285,8 @@ async function closeStream(
 
 async function executeTool(
   toolCall: LanguageModelV2ToolCall,
-  tools: ToolSet
+  tools: ToolSet,
+  messages: LanguageModelV2Prompt
 ): Promise<LanguageModelV2ToolResultPart> {
   const tool = tools[toolCall.toolName];
   if (!tool) throw new Error(`Tool "${toolCall.toolName}" not found`);
@@ -221,8 +305,8 @@ async function executeTool(
   try {
     const toolResult = await tool.execute(input.value, {
       toolCallId: toolCall.toolCallId,
-      // TODO: pass the proper messages to the tool (we'd need to pass them through the iterator)
-      messages: [],
+      // Pass the conversation messages to the tool so it has context about the conversation
+      messages,
     });
 
     return {

@@ -1,5 +1,28 @@
 # @workflow/ai
 
+## 4.0.1-beta.22
+
+### Patch Changes
+
+- 17904fc: Add `prepareStep` argument for DurableAgent to modify messages between AI loop steps
+- 17904fc: Make current messages state available to tool calls
+- Updated dependencies [6dd1750]
+  - workflow@4.0.1-beta.22
+
+## 4.0.1-beta.21
+
+### Patch Changes
+
+- aba5264: Add `onStepFinish` callback to `DurableAgent#stream()`
+  - workflow@4.0.1-beta.21
+
+## 4.0.1-beta.20
+
+### Patch Changes
+
+- 00e3345: Make `DurableAgent#stream()` return a `messages` array
+  - workflow@4.0.1-beta.20
+
 ## 4.0.1-beta.19
 
 ### Patch Changes

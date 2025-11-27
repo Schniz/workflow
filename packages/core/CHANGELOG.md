@@ -1,5 +1,36 @@
 # @workflow/core
 
+## 4.0.1-beta.19
+
+### Patch Changes
+
+- 07800c2: Support closure variables for serialized step functions
+- fb9fd0f: Add support for closure scope vars in step functions
+- Updated dependencies [fb9fd0f]
+- Updated dependencies [40057db]
+  - @workflow/world@4.0.1-beta.7
+  - @workflow/world-local@4.0.1-beta.13
+  - @workflow/errors@4.0.1-beta.6
+  - @workflow/world-vercel@4.0.1-beta.13
+
+## 4.0.1-beta.18
+
+### Patch Changes
+
+- Updated dependencies [6889dac]
+  - @workflow/world-vercel@4.0.1-beta.12
+
+## 4.0.1-beta.17
+
+### Patch Changes
+
+- Updated dependencies [2c438c3]
+- Updated dependencies [edb69c3]
+  - @workflow/world-vercel@4.0.1-beta.11
+  - @workflow/world-local@4.0.1-beta.12
+  - @workflow/utils@4.0.1-beta.4
+  - @workflow/errors@4.0.1-beta.6
+
 ## 4.0.1-beta.16
 
 ### Patch Changes

@@ -1,5 +1,27 @@
 # @workflow/web-shared
 
+## 4.0.1-beta.20
+
+### Patch Changes
+
+- fb9fd0f: Add support for closure scope vars in step functions
+- Updated dependencies [07800c2]
+- Updated dependencies [fb9fd0f]
+  - @workflow/core@4.0.1-beta.19
+  - @workflow/world@4.0.1-beta.7
+
+## 4.0.1-beta.19
+
+### Patch Changes
+
+- @workflow/core@4.0.1-beta.18
+
+## 4.0.1-beta.18
+
+### Patch Changes
+
+- @workflow/core@4.0.1-beta.17
+
 ## 4.0.1-beta.17
 
 ### Patch Changes
