@@ -2,10 +2,10 @@
   "title": "AI Agents",
   "pages": [
     "index",
-    "defining-tools",
     "resumable-streams",
     "sleep-and-delays",
-    "human-in-the-loop"
+    "human-in-the-loop",
+    "message-queueing"
   ],
   "defaultOpen": true
 }

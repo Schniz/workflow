@@ -1,0 +1,109 @@
+---
+title: Defining Tools
+---
+
+Tools in Workflow DevKit follow the same structure as [AI SDK tools](https://ai-sdk.dev/docs/foundations/tools), but with additional context provided by `DurableAgent`. This page covers the key concepts for defining tools in durable agents.
+
+<Callout>
+For a complete walkthrough with examples, see the **[Building Durable AI Agents](/guides/ai-agents)** guide.
+</Callout>
+
+## Tool Execute Context
+
+When `DurableAgent` invokes a tool, the execute function receives additional context:
+
+```typescript lineNumbers
+execute: async (input, options) => {
+  const { toolCallId, messages } = options;
+  
+  // toolCallId: Unique identifier for correlating stream chunks
+  // messages: Full conversation history (LanguageModelV2Prompt format)
+  
+  return result;
+}
+```
+
+### Accessing Conversation Messages
+
+Tools can access the full conversation history through the `messages` option:
+
+```typescript lineNumbers
+export const summarizeConversation = tool({
+  description: 'Summarize the conversation so far',
+  inputSchema: z.object({
+    focus: z.string().optional(),
+  }),
+  execute: async ({ focus }, { messages }) => { // [!code highlight]
+    const userMessages = messages
+      .filter(m => m.role === 'user')
+      .map(m => m.content.filter(p => p.type === 'text').map(p => p.text).join(' '));
+
+    return { summary: userMessages.slice(-3).join(', ') };
+  },
+});
+```
+
+## Streaming from Tools
+
+Tools can emit real-time updates by writing to the workflow's output stream. Since `getWritable()` requires the step context, streaming must be done in a step function:
+
+```typescript lineNumbers
+async function emitProgress(status: string, toolCallId: string) {
+  'use step'; // [!code highlight]
+
+  const writable = getWritable<UIMessageChunk>();
+  const writer = writable.getWriter();
+
+  await writer.write({
+    id: toolCallId,
+    type: 'data-status',
+    data: { status },
+  });
+
+  writer.releaseLock();
+}
+
+async function executeSearch({ query }: { query: string }, { toolCallId }: { toolCallId: string }) {
+  await emitProgress('searching', toolCallId);
+  const results = await performSearch(query);
+  await emitProgress('complete', toolCallId);
+  return results;
+}
+```
+
+## Step-Level vs Workflow-Level
+
+Tools can run at two levels with different capabilities:
+
+| Capability | Step-Level (`"use step"`) | Workflow-Level |
+|------------|---------------------------|----------------|
+| `getWritable()` | ✅ | ❌ |
+| Automatic retries | ✅ | ❌ |
+| `sleep()` | ❌ | ✅ |
+| `createWebhook()` | ❌ | ✅ |
+
+Most tools combine both: use step functions for I/O operations, and keep the execute function at the workflow level for orchestration:
+
+```typescript lineNumbers
+// Step: handles I/O with retries
+async function performFetch(url: string) {
+  'use step';
+  const response = await fetch(url);
+  return response.json();
+}
+
+// Workflow-level: orchestrates steps and can use sleep()
+async function executeFetchWithDelay({ url }: { url: string }) {
+  const result = await performFetch(url);
+  await sleep('5s'); // Only available at workflow level
+  return result;
+}
+```
+
+## Related
+
+- [Building Durable AI Agents](/guides/ai-agents) - Complete guide with examples
+- [Streaming](/docs/foundations/streaming) - How streaming works
+- [Workflows and Steps](/docs/foundations/workflows-and-steps) - Understanding execution contexts
+- [`DurableAgent` API Reference](/docs/api-reference/workflow-ai/durable-agent) - Full API documentation
+

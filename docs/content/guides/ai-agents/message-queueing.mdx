@@ -1,0 +1,411 @@
+---
+title: Queueing User Messages
+---
+
+In some scenarios, you want to queue new messages into an ongoing AI agent conversation. For example, when a user sends follow-up messages while the agent is still processing, or when external events need to influence the conversation mid-stream.
+
+Workflow DevKit's [`createWebhook()`](/docs/api-reference/workflow/create-webhook) enables this pattern: creating a webhook that can be called multiple times, iterating over incoming requests, and continuing the agent conversation with each new message.
+
+## How It Works
+
+<Steps>
+
+<Step>
+A webhook is created and its URL is sent to the client, allowing them to send follow-up messages.
+</Step>
+
+<Step>
+The agent processes the initial message and returns the updated conversation history.
+</Step>
+
+<Step>
+The workflow enters a loop, waiting for webhook calls using `for await...of`.
+</Step>
+
+<Step>
+Each webhook call triggers another `agent.stream()` with the new message appended to the conversation.
+</Step>
+
+<Step>
+A special command (like `/done`) signals the end of the conversation.
+</Step>
+
+</Steps>
+
+## Implementation
+
+<Steps>
+
+<Step>
+### Create the Chat Workflow
+
+The workflow creates a webhook and loops over incoming messages:
+
+```typescript title="ai/chat-workflow.ts" lineNumbers
+import { DurableAgent } from '@workflow/ai/agent';
+import type { ModelMessage, UIMessageChunk } from 'ai';
+import { createWebhook, getWritable } from 'workflow';
+
+export async function chatWorkflow(initialMessage: string) {
+  'use workflow';
+
+  const writable = getWritable<UIMessageChunk>();
+
+  // Create a webhook for receiving follow-up messages // [!code highlight]
+  const webhook = createWebhook(); // [!code highlight]
+
+  // Emit the webhook URL to the client
+  await emitWebhookUrl(webhook.url);
+
+  const agent = new DurableAgent({
+    model: 'anthropic/claude-sonnet',
+    system: 'You are a helpful assistant.',
+  });
+
+  // Start with the initial message
+  const messages: ModelMessage[] = [
+    { role: 'user', content: initialMessage },
+  ];
+
+  // Process the initial message // [!code highlight]
+  const { messages: updatedMessages } = await agent.stream({ // [!code highlight]
+    writable, // [!code highlight]
+    messages, // [!code highlight]
+    preventClose: true, // Keep stream open for follow-ups // [!code highlight]
+  }); // [!code highlight]
+  messages.push(...updatedMessages.slice(messages.length));
+
+  // Loop over incoming webhook requests // [!code highlight]
+  for await (const request of webhook) { // [!code highlight]
+    const { message } = await request.json();
+
+    // Check for end-of-conversation signal
+    if (message === '/done') {
+      break;
+    }
+
+    // Add the new user message
+    messages.push({ role: 'user', content: message });
+
+    // Continue the conversation // [!code highlight]
+    const { messages: latestMessages } = await agent.stream({ // [!code highlight]
+      writable, // [!code highlight]
+      messages, // [!code highlight]
+      preventClose: true, // [!code highlight]
+      sendStart: false, // Don't send another start chunk // [!code highlight]
+    }); // [!code highlight]
+    messages.push(...latestMessages.slice(messages.length));
+  }
+
+  // Close the stream when done
+  await closeStream(writable);
+
+  return { messages };
+}
+
+async function emitWebhookUrl(url: string) {
+  'use step';
+
+  const writable = getWritable<UIMessageChunk>();
+  const writer = writable.getWriter();
+
+  await writer.write({
+    type: 'data-chat-webhook',
+    data: { url },
+  });
+
+  writer.releaseLock();
+}
+
+async function closeStream(writable: WritableStream<UIMessageChunk>) {
+  'use step';
+
+  const writer = writable.getWriter();
+  await writer.write({ type: 'finish' });
+  writer.releaseLock();
+  await writable.close();
+}
+```
+
+<Callout type="info">
+The `for await...of` syntax iterates over webhook requests as they arrive. Each iteration waits for the next request, allowing the workflow to suspend without consuming resources.
+</Callout>
+
+</Step>
+
+<Step>
+### Client-Side: Send Follow-Up Messages
+
+The client receives the webhook URL and can send messages directly:
+
+```typescript title="lib/chat-api.ts" lineNumbers
+export async function sendMessage(webhookUrl: string, message: string) {
+  await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message }),
+  });
+}
+
+export async function endConversation(webhookUrl: string) {
+  await fetch(webhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: '/done' }),
+  });
+}
+```
+
+</Step>
+
+<Step>
+### Build the Chat Component
+
+A React component that handles the conversation:
+
+```typescript title="components/chat.tsx" lineNumbers
+'use client';
+
+import { useState, useEffect } from 'react';
+import { sendMessage, endConversation } from '@/lib/chat-api';
+
+interface ChatProps {
+  webhookUrl: string | null;
+  onEnd?: () => void;
+}
+
+export function Chat({ webhookUrl, onEnd }: ChatProps) {
+  const [input, setInput] = useState('');
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!webhookUrl || !input.trim()) return;
+
+    setIsSending(true);
+    try {
+      await sendMessage(webhookUrl, input);
+      setInput('');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleEnd = async () => {
+    if (!webhookUrl) return;
+    await endConversation(webhookUrl);
+    onEnd?.();
+  };
+
+  return (
+    <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Type a message..."
+          className="flex-1 border rounded px-3 py-2"
+          disabled={!webhookUrl || isSending}
+        />
+        <button
+          type="submit"
+          disabled={!webhookUrl || isSending}
+          className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+        >
+          Send
+        </button>
+      </form>
+
+      <button
+        onClick={handleEnd}
+        disabled={!webhookUrl}
+        className="text-sm text-gray-500 hover:text-gray-700"
+      >
+        End conversation
+      </button>
+    </div>
+  );
+}
+```
+
+</Step>
+
+</Steps>
+
+## Use Cases
+
+### Multi-Turn Chat with Tools
+
+Allow users to continue chatting while the agent has access to tools:
+
+```typescript lineNumbers
+import { DurableAgent } from '@workflow/ai/agent';
+import type { ModelMessage, UIMessageChunk } from 'ai';
+import { createWebhook, getWritable } from 'workflow';
+import { searchTool, calculatorTool } from './tools';
+
+export async function chatWithToolsWorkflow(initialMessage: string) {
+  'use workflow';
+
+  const writable = getWritable<UIMessageChunk>();
+  const webhook = createWebhook();
+
+  await emitWebhookUrl(webhook.url);
+
+  const agent = new DurableAgent({
+    model: 'anthropic/claude-sonnet',
+    system: 'You are a helpful assistant with access to search and calculation tools.',
+    tools: {
+      search: searchTool,
+      calculate: calculatorTool,
+    },
+  });
+
+  const messages: ModelMessage[] = [
+    { role: 'user', content: initialMessage },
+  ];
+
+  // Process initial message (agent may call tools)
+  const { messages: updated } = await agent.stream({
+    writable,
+    messages,
+    preventClose: true,
+  });
+  messages.push(...updated.slice(messages.length));
+
+  // Continue conversation with follow-ups
+  for await (const request of webhook) {
+    const { message } = await request.json();
+
+    if (message === '/done') break;
+
+    messages.push({ role: 'user', content: message });
+
+    const { messages: latest } = await agent.stream({
+      writable,
+      messages,
+      preventClose: true,
+      sendStart: false,
+    });
+    messages.push(...latest.slice(messages.length));
+  }
+
+  await closeStream(writable);
+  return { messages };
+}
+```
+
+### Collaborative Sessions
+
+Multiple users can send messages to the same conversation:
+
+```typescript lineNumbers
+export async function collaborativeChatWorkflow() {
+  'use workflow';
+
+  const writable = getWritable<UIMessageChunk>();
+  const webhook = createWebhook();
+
+  // Share this URL with all participants
+  await emitWebhookUrl(webhook.url);
+
+  const agent = new DurableAgent({
+    model: 'anthropic/claude-sonnet',
+    system: 'You are facilitating a group discussion. Address participants by name when they identify themselves.',
+  });
+
+  const messages: ModelMessage[] = [];
+
+  for await (const request of webhook) {
+    const { message, username } = await request.json();
+
+    if (message === '/done') break;
+
+    // Include the username in the message
+    const formattedMessage = username
+      ? `[${username}]: ${message}`
+      : message;
+
+    messages.push({ role: 'user', content: formattedMessage });
+
+    const { messages: latest } = await agent.stream({
+      writable,
+      messages,
+      preventClose: true,
+      sendStart: messages.length === 1, // Only send start on first message
+    });
+    messages.push(...latest.slice(messages.length));
+  }
+
+  await closeStream(writable);
+  return { messages };
+}
+```
+
+### Timeout-Based Auto-Close
+
+Automatically end the conversation after a period of inactivity:
+
+```typescript lineNumbers
+import { createWebhook, getWritable, sleep } from 'workflow';
+
+export async function chatWithTimeoutWorkflow(initialMessage: string) {
+  'use workflow';
+
+  const writable = getWritable<UIMessageChunk>();
+  const webhook = createWebhook();
+  const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+  await emitWebhookUrl(webhook.url);
+
+  const agent = new DurableAgent({
+    model: 'anthropic/claude-sonnet',
+    system: 'You are a helpful assistant.',
+  });
+
+  const messages: ModelMessage[] = [
+    { role: 'user', content: initialMessage },
+  ];
+
+  const { messages: updated } = await agent.stream({
+    writable,
+    messages,
+    preventClose: true,
+  });
+  messages.push(...updated.slice(messages.length));
+
+  // Race between webhook messages and timeout
+  let timedOut = false;
+
+  for await (const request of webhook) {
+    const { message } = await request.json();
+
+    if (message === '/done') break;
+
+    messages.push({ role: 'user', content: message });
+
+    const { messages: latest } = await agent.stream({
+      writable,
+      messages,
+      preventClose: true,
+      sendStart: false,
+    });
+    messages.push(...latest.slice(messages.length));
+  }
+
+  if (timedOut) {
+    // Notify the user the session expired
+    await emitTimeout(writable);
+  }
+
+  await closeStream(writable);
+  return { messages, timedOut };
+}
+```
+
+## Related Documentation
+
+- [Human-in-the-Loop](/guides/ai-agents/human-in-the-loop) - Using hooks for approval workflows
+- [Hooks & Webhooks](/docs/foundations/hooks) - Complete guide to hooks and webhooks
+- [`createWebhook()` API Reference](/docs/api-reference/workflow/create-webhook) - Webhook configuration options
+- [`DurableAgent` API Reference](/docs/api-reference/workflow-ai/durable-agent) - Full API documentation
