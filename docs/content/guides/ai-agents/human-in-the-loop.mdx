@@ -2,22 +2,20 @@
 title: Human-in-the-Loop
 ---
 
-Some agent actions require human approval before proceeding - deploying to production, sending emails to customers, or making financial transactions. Workflow DevKit's webhook and hook primitives enable "human-in-the-loop" patterns where workflows pause until a human takes action.
+An extremely common feature necessary for running AI agents in production is the ability to wait for human input or external events before proceeding.
+
+Workflow DevKit's webhook and hook primitives enable "human-in-the-loop" patterns where workflows pause until a human takes action, allowing smooth resumption of workflows even after days of inactivity, and provides stability across code deployments.
 
 ## How It Works
 
 <Steps>
 
 <Step>
-The agent calls a tool (like `humanApproval`) with a message describing what needs approval.
+`createWebhook()` or `createHook()` generates a unique URL (or token) that can resume a workflow. This can be packaged as a tool for the Agent to call, or used directly in your backend code.
 </Step>
 
 <Step>
-`createWebhook()` generates a unique URL that can resume the workflow.
-</Step>
-
-<Step>
-The tool emits a data chunk containing the approval URL to the UI.
+The workflow emits a data chunk containing the webhook URL, sending it to the consumer of the workflow, such as a chat UI, or an external service.
 </Step>
 
 <Step>
@@ -25,11 +23,11 @@ The workflow pauses at `await webhook` - no compute resources are consumed.
 </Step>
 
 <Step>
-When a human clicks approve/reject and the webhook URL is called, the workflow resumes.
+The consumer of the workflow calls the webhook URL, sending data back to the workflow.
 </Step>
 
 <Step>
-The tool receives any data sent with the webhook (approval status, comments) and returns.
+The workflow receives any data sent with the webhook (approval status, comments) and resumes execution.
 </Step>
 
 </Steps>
@@ -41,42 +39,13 @@ Add a tool that pauses the agent until a human approves or rejects:
 <Steps>
 
 <Step>
-### Create the Emit Helper
-
-First, create a step function to emit the approval request to the UI:
-
-```typescript title="ai/tools/human-approval.ts" lineNumbers
-import { getWritable } from 'workflow';
-import type { UIMessageChunk } from 'ai';
-
-async function emitApprovalRequest(
-  { url, message }: { url: string; message: string },
-  { toolCallId }: { toolCallId: string }
-) {
-  'use step';
-
-  const writable = getWritable<UIMessageChunk>();
-  const writer = writable.getWriter();
-
-  await writer.write({
-    id: toolCallId,
-    type: 'data-approval-required',
-    data: { url, message },
-  });
-
-  writer.releaseLock();
-}
-```
-</Step>
-
-<Step>
-### Implement the Execute Function
+### Implement the tool
 
 The execute function creates a webhook and waits for approval:
 
 ```typescript title="ai/tools/human-approval.ts" lineNumbers
-import { tool } from 'ai';
-import { createWebhook } from 'workflow'; // [!code highlight]
+import { tool, type UIMessageChunk } from 'ai';
+import { createWebhook, getWritable } from 'workflow'; // [!code highlight]
 import { z } from 'zod';
 
 async function executeHumanApproval(
@@ -111,6 +80,25 @@ export const humanApproval = tool({
   }),
   execute: executeHumanApproval,
 });
+
+// This is just a helper function to emit the approval request to the UI
+async function emitApprovalRequest(
+  { url, message }: { url: string; message: string },
+  { toolCallId }: { toolCallId: string }
+) {
+  'use step';
+
+  const writable = getWritable<UIMessageChunk>();
+  const writer = writable.getWriter();
+
+  await writer.write({
+    id: toolCallId,
+    type: 'data-approval-required',
+    data: { url, message },
+  });
+
+  writer.releaseLock();
+}
 ```
 
 <Callout type="info">
@@ -118,16 +106,10 @@ The `createWebhook()` function must be called from within a workflow context, no
 </Callout>
 </Step>
 
-</Steps>
-
-## Handling the Approval UI
-
-The UI receives a data chunk with type `data-approval-required`. Build a component that displays the approval request and handles the user's decision:
-
-<Steps>
-
 <Step>
 ### Create the Approval Component
+
+The UI receives a data chunk with type `data-approval-required`. Build a component that displays the approval request and handles the user's decision. Instead of giving the human UI to resolve this hook, this could also be sent to an external service, e.g. as a payment provider callback.
 
 ```typescript title="components/approval-button.tsx" lineNumbers
 'use client';
@@ -194,6 +176,7 @@ export function ApprovalButton({ data }: { data: ApprovalData }) {
   );
 }
 ```
+
 </Step>
 
 <Step>
@@ -215,6 +198,7 @@ import { ApprovalButton } from './approval-button';
   return null;
 })}
 ```
+
 </Step>
 
 </Steps>
@@ -247,6 +231,7 @@ export const deploymentApprovalHook = defineHook({
   }),
 });
 ```
+
 </Tab>
 
 <Tab value="Tool Implementation">
@@ -304,6 +289,7 @@ export const deploymentApproval = tool({
   execute: executeDeploymentApproval,
 });
 ```
+
 </Tab>
 
 <Tab value="API Route">
@@ -336,6 +322,7 @@ export async function POST(request: Request) {
 ```
 
 This API can be called by:
+
 - Your UI components (passing the token from the data chunk)
 - Backend services that need to programmatically approve/reject
 - External systems via API integration
@@ -407,139 +394,6 @@ export async function criticalActionWorkflow(action: string) {
   return { status: 'completed' };
 }
 ```
-
-## Complete Example
-
-A full human approval implementation with tool and UI component:
-
-<Tabs items={['Tool', 'UI Component']}>
-
-<Tab value="Tool">
-
-```typescript title="ai/tools/human-approval.ts" lineNumbers
-import { tool } from 'ai';
-import { createWebhook, getWritable } from 'workflow';
-import { z } from 'zod';
-import type { UIMessageChunk } from 'ai';
-
-async function emitApprovalRequest(
-  { url, message }: { url: string; message: string },
-  { toolCallId }: { toolCallId: string }
-) {
-  'use step';
-
-  const writable = getWritable<UIMessageChunk>();
-  const writer = writable.getWriter();
-
-  await writer.write({
-    id: toolCallId,
-    type: 'data-approval-required',
-    data: { url, message },
-  });
-
-  writer.releaseLock();
-}
-
-async function executeHumanApproval(
-  { message }: { message: string },
-  { toolCallId }: { toolCallId: string }
-) {
-  const webhook = createWebhook();
-
-  await emitApprovalRequest({ url: webhook.url, message }, { toolCallId });
-
-  const request = await webhook;
-  const { approved, comment } = await request.json();
-
-  if (!approved) {
-    return `Action rejected${comment ? `: ${comment}` : ''}`;
-  }
-
-  return `Approved${comment ? ` with comment: ${comment}` : ''}`;
-}
-
-export const humanApproval = tool({
-  description: 'Request human approval before proceeding with an action',
-  inputSchema: z.object({
-    message: z.string().describe('Description of what needs approval'),
-  }),
-  execute: executeHumanApproval,
-});
-```
-
-</Tab>
-
-<Tab value="UI Component">
-
-```typescript title="components/approval-button.tsx" lineNumbers
-'use client';
-
-import { useState } from 'react';
-
-interface ApprovalData {
-  url: string;
-  message: string;
-}
-
-export function ApprovalButton({ data }: { data: ApprovalData }) {
-  const [comment, setComment] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
-
-  const handleSubmit = async (approved: boolean) => {
-    setIsSubmitting(true);
-    try {
-      await fetch(data.url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approved, comment }),
-      });
-      setIsComplete(true);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (isComplete) {
-    return <div className="text-muted-foreground">Response submitted</div>;
-  }
-
-  return (
-    <div className="border rounded-lg p-4 space-y-4">
-      <p className="font-medium">{data.message}</p>
-
-      <textarea
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
-        placeholder="Add a comment (optional)..."
-        className="w-full border rounded p-2 text-sm"
-        rows={2}
-      />
-
-      <div className="flex gap-2">
-        <button
-          onClick={() => handleSubmit(true)}
-          disabled={isSubmitting}
-          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
-        >
-          {isSubmitting ? 'Submitting...' : 'Approve'}
-        </button>
-        <button
-          onClick={() => handleSubmit(false)}
-          disabled={isSubmitting}
-          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
-        >
-          {isSubmitting ? 'Submitting...' : 'Reject'}
-        </button>
-      </div>
-    </div>
-  );
-}
-```
-
-</Tab>
-
-</Tabs>
 
 ## Related Documentation
 
