@@ -4,7 +4,7 @@ title: Defining Tools
 
 Tools in Workflow DevKit follow the same structure as [AI SDK tools](https://ai-sdk.dev/docs/foundations/tools), but with additional context provided by `DurableAgent`. This page covers the key concepts for defining tools in durable agents.
 
-<Callout>
+<Callout type="info">
 For a complete walkthrough with examples, see the **[Building Durable AI Agents](/guides/ai-agents)** guide.
 </Callout>
 
@@ -15,10 +15,10 @@ When `DurableAgent` invokes a tool, the execute function receives additional con
 ```typescript lineNumbers
 execute: async (input, options) => {
   const { toolCallId, messages } = options;
-  
+
   // toolCallId: Unique identifier for correlating stream chunks
   // messages: Full conversation history (LanguageModelV2Prompt format)
-  
+
   return result;
 }
 ```
@@ -106,4 +106,3 @@ async function executeFetchWithDelay({ url }: { url: string }) {
 - [Streaming](/docs/foundations/streaming) - How streaming works
 - [Workflows and Steps](/docs/foundations/workflows-and-steps) - Understanding execution contexts
 - [`DurableAgent` API Reference](/docs/api-reference/workflow-ai/durable-agent) - Full API documentation
-

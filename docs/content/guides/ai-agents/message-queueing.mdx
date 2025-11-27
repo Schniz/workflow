@@ -2,7 +2,7 @@
 title: Queueing User Messages
 ---
 
-When using [multi-turn workflows](/guides/ai-agents/chat-session-modeling#multi-turn-workflows), messages typically arrive between agent turns—the workflow waits at a hook, receives a message, then starts a new turn. But sometimes you need to inject messages *during* an agent's turn, before tool calls complete or while the model is reasoning.
+When using [multi-turn workflows](/guides/ai-agents/chat-session-modeling#multi-turn-workflows), messages typically arrive between agent turns. The workflow waits at a hook, receives a message, then starts a new turn. But sometimes you need to inject messages *during* an agent's turn, before tool calls complete or while the model is reasoning.
 
 `DurableAgent`'s `prepareStep` callback enables this by running before each step in the agent loop, giving you a chance to inject queued messages into the conversation.
 
@@ -87,7 +87,7 @@ export async function chatWorkflow(threadId: string, initialMessage: string) {
 }
 ```
 
-Messages sent via `chatMessageHook.resume()` accumulate in the queue and get injected before the next step—whether that's a tool call or another LLM request.
+Messages sent via `chatMessageHook.resume()` accumulate in the queue and get injected before the next step, whether that's a tool call or another LLM request.
 
 <Callout type="info">
 The `prepareStep` callback receives messages in `LanguageModelV2Prompt` format (with content arrays), which is the internal format used by the AI SDK.
@@ -97,7 +97,7 @@ The `prepareStep` callback receives messages in `LanguageModelV2Prompt` format (
 
 Beyond message injection, `prepareStep` supports other per-step modifications:
 
-**Context Management** — Trim old messages to stay within context limits:
+**Context Management**: Trim old messages to stay within context limits:
 
 ```typescript lineNumbers
 prepareStep: ({ messages }) => {
@@ -113,7 +113,7 @@ prepareStep: ({ messages }) => {
 }
 ```
 
-**Dynamic Model Selection** — Switch models based on conversation complexity:
+**Dynamic Model Selection**: Switch models based on conversation complexity:
 
 ```typescript lineNumbers
 prepareStep: ({ stepNumber, messages }) => {
