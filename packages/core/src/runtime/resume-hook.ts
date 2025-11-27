@@ -112,6 +112,10 @@ export async function resumeHook<T = any>(
           }
         }
 
+        if (workflowRun.status === 'paused') {
+          await world.runs.update(hook.runId, { status: 'running' });
+        }
+
         // Re-trigger the workflow against the deployment ID associated
         // with the workflow run that the hook belongs to
         await world.queue(

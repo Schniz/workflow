@@ -318,8 +318,11 @@ export function workflowEntrypoint(workflowCode: string) {
               ...Attribute.WorkflowStartedAt(workflowStartedAt),
             });
 
-            if (workflowRun.status !== 'running') {
-              // Workflow has already completed or failed, so we can skip it
+            if (
+              workflowRun.status !== 'running' &&
+              workflowRun.status !== 'paused'
+            ) {
+              // Workflow has already completed, failed, or cancelled, so we can skip it
               console.warn(
                 `Workflow "${runId}" has status "${workflowRun.status}", skipping`
               );
@@ -331,6 +334,13 @@ export function workflowEntrypoint(workflowCode: string) {
               // the replaying the workflow is itself failing.
 
               return;
+            }
+
+            // If workflow was paused (waiting for hook/wait), set it back to running
+            if (workflowRun.status === 'paused') {
+              workflowRun = await world.runs.update(runId, {
+                status: 'running',
+              });
             }
 
             // Load all events into memory before running
@@ -521,6 +531,15 @@ export function workflowEntrypoint(workflowCode: string) {
                 ...Attribute.WorkflowRunStatus('pending_steps'),
                 ...Attribute.WorkflowStepsCreated(err.steps.length),
               });
+
+              // If we only have hooks or waits (no steps to execute), set status to paused.
+              // This indicates the workflow is suspended waiting for external input or a timer.
+              if (
+                err.stepCount === 0 &&
+                (err.hookCount > 0 || err.waitCount > 0)
+              ) {
+                await world.runs.update(runId, { status: 'paused' });
+              }
 
               // If we encountered any waits, return the minimum timeout
               if (minTimeoutSeconds !== null) {
