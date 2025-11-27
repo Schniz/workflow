@@ -313,13 +313,15 @@ The multi-turn pattern also easily enables multi-party chat sessions. Parties ca
 
 <Tab value="System Event">
 
-```typescript title="app/api/webhooks/order-update/route.ts" lineNumbers
+Internal system events like scheduled tasks, background jobs, or database triggers can inject updates into an active conversation.
+
+```typescript title="app/api/internal/order-update/route.ts" lineNumbers
 import { chatMessageHook } from '@/ai/hooks/chat-message';
 
+// Called by your order processing system when status changes
 export async function POST(req: Request) {
   const { threadId, orderStatus } = await req.json();
 
-  // Inject order update into the conversation // [!code highlight]
   await chatMessageHook.resume(`thread:${threadId}`, { // [!code highlight]
     message: `[System] Order status updated: ${orderStatus}`, // [!code highlight]
   }); // [!code highlight]
@@ -332,18 +334,25 @@ export async function POST(req: Request) {
 
 <Tab value="External Service">
 
-```typescript title="app/api/webhooks/order-update/route.ts" lineNumbers
+External webhooks from third-party services (Stripe, Twilio, etc.) can notify the conversation of events.
+
+```typescript title="app/api/webhooks/stripe/route.ts" lineNumbers
 import { chatMessageHook } from '@/ai/hooks/chat-message';
+import Stripe from 'stripe';
 
 export async function POST(req: Request) {
-  const { threadId, orderStatus } = await req.json();
+  const event = await req.json() as Stripe.Event;
 
-  // Inject order update into the conversation // [!code highlight]
-  await chatMessageHook.resume(`thread:${threadId}`, { // [!code highlight]
-    message: `[System] Order status updated: ${orderStatus}`, // [!code highlight]
-  }); // [!code highlight]
+  if (event.type === 'payment_intent.succeeded') {
+    const paymentIntent = event.data.object as Stripe.PaymentIntent;
+    const threadId = paymentIntent.metadata.threadId; // [!code highlight]
 
-  return Response.json({ success: true });
+    await chatMessageHook.resume(`thread:${threadId}`, { // [!code highlight]
+      message: `[Stripe] Payment of $${(paymentIntent.amount / 100).toFixed(2)} received.`, // [!code highlight]
+    }); // [!code highlight]
+  }
+
+  return Response.json({ received: true });
 }
 ```
 
@@ -351,15 +360,20 @@ export async function POST(req: Request) {
 
 <Tab value="Multiple Users">
 
-```typescript title="app/api/webhooks/order-update/route.ts" lineNumbers
+Multiple human users can participate in the same conversation. Each user's client connects to the same workflow stream.
+
+```typescript title="app/api/chat/[id]/route.ts" lineNumbers
 import { chatMessageHook } from '@/ai/hooks/chat-message';
+import { getUser } from '@/lib/auth';
 
-export async function POST(req: Request) {
-  const { threadId, orderStatus } = await req.json();
+export async function POST(req: Request, { params }) {
+  const { id: threadId } = await params;
+  const { message } = await req.json();
+  const user = await getUser(req); // [!code highlight]
 
-  // Inject order update into the conversation // [!code highlight]
+  // Inject message with user attribution // [!code highlight]
   await chatMessageHook.resume(`thread:${threadId}`, { // [!code highlight]
-    message: `[System] Order status updated: ${orderStatus}`, // [!code highlight]
+    message: `[${user.name}] ${message}`, // [!code highlight]
   }); // [!code highlight]
 
   return Response.json({ success: true });
@@ -369,7 +383,7 @@ export async function POST(req: Request) {
 </Tab>
 
 </Tabs>
-j
+
 ## Related Documentation
 
 - [Building Durable AI Agents](/guides/ai-agents) - Foundation guide for durable agents
