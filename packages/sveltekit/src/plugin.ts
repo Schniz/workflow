@@ -1,6 +1,6 @@
-import type { HotUpdateOptions, Plugin } from "vite";
-import { SvelteKitBuilder } from "./builder.js";
-import { workflowTransformPlugin } from "@workflow/rollup";
+import type { HotUpdateOptions, Plugin } from 'vite';
+import { SvelteKitBuilder } from './builder.js';
+import { workflowTransformPlugin } from '@workflow/rollup';
 
 export function workflowPlugin(): Plugin[] {
   let builder: SvelteKitBuilder;
@@ -8,7 +8,7 @@ export function workflowPlugin(): Plugin[] {
   return [
     workflowTransformPlugin(),
     {
-      name: "workflow:sveltekit",
+      name: 'workflow:sveltekit',
 
       configResolved() {
         builder = new SvelteKitBuilder();
@@ -30,13 +30,13 @@ export function workflowPlugin(): Plugin[] {
           content = await read();
         } catch {
           // File might have been deleted - trigger rebuild to update generated routes
-          console.log("Workflow file deleted, regenerating routes...");
+          console.log('Workflow file deleted, regenerating routes...');
           try {
             await builder.build();
           } catch (buildError) {
             // Build might fail if files are being deleted during test cleanup
             // Log but don't crash - the next successful change will trigger a rebuild
-            console.error("Build failed during file deletion:", buildError);
+            console.error('Build failed during file deletion:', buildError);
           }
           return;
         }
@@ -52,20 +52,20 @@ export function workflowPlugin(): Plugin[] {
         }
 
         // Rebuild everything - simpler and more reliable than tracking individual files
-        console.log("Workflow file changed, regenerating routes...");
+        console.log('Workflow file changed, regenerating routes...');
         try {
           await builder.build();
         } catch (buildError) {
           // Build might fail if files are being modified/deleted during test cleanup
           // Log but don't crash - the next successful change will trigger a rebuild
-          console.error("Build failed during HMR:", buildError);
+          console.error('Build failed during HMR:', buildError);
           return;
         }
 
         // Trigger full reload of workflow routes
         server.ws.send({
-          type: "full-reload",
-          path: "*",
+          type: 'full-reload',
+          path: '*',
         });
 
         // Let Vite handle the normal HMR for the changed file
