@@ -18,6 +18,10 @@ Create a tool that allows the agent to pause for a specified duration:
 <Step>
 ### Define the Tool
 
+First, we make the `sleep()` function available to the AI Agent by packaging it as a tool.
+
+Note that the `sleep()` function must be called from within a workflow context, not from within a step. This is why `executeSleep` does not have `"use step"` - it runs in the workflow context where `sleep()` is available.
+
 ```typescript title="ai/tools/sleep.ts" lineNumbers
 import { tool } from 'ai';
 import { getWritable, sleep } from 'workflow'; // [!code highlight]
@@ -28,7 +32,34 @@ const inputSchema = z.object({
   durationMs: z.number().describe('Duration to sleep in milliseconds'),
 });
 
-async function reportSleep(
+async function executeSleep(
+  { durationMs }: z.infer<typeof inputSchema>,
+  { toolCallId }: { toolCallId: string }
+) {
+  // Note: No "use step" here - sleep is a workflow-level function // [!code highlight]
+
+  await sleep(durationMs); // [!code highlight]
+
+  return `Slept for ${durationMs}ms`;
+}
+
+export const sleepTool = tool({
+  description: 'Pause execution for a specified duration',
+  inputSchema,
+  execute: executeSleep,
+});
+```
+
+</Step>
+
+<Step>
+### Emitting status updates
+
+We want the UI to display the waiting state, so we emit a new chunk type `data-wait`, that the UI can then consume.
+
+```typescript lineNumbers
+// This is just a helper function to emit the sleep status to the UI
+async function emitSleepStatus(
   { durationMs }: { durationMs: number },
   { toolCallId }: { toolCallId: string }
 ) {
@@ -47,81 +78,36 @@ async function reportSleep(
 
   writer.releaseLock();
 }
+```
 
+Then modify the tool execution to emit the status update:
+
+```typescript lineNumbers
 async function executeSleep(
   { durationMs }: z.infer<typeof inputSchema>,
   { toolCallId }: { toolCallId: string }
 ) {
-  // Note: No "use step" here - sleep is a workflow-level function // [!code highlight]
-
-  await reportSleep({ durationMs }, { toolCallId });
-  await sleep(durationMs); // [!code highlight]
-
-  return `Slept for ${durationMs}ms`;
-}
-
-export const sleepTool = tool({
-  description: 'Pause execution for a specified duration',
-  inputSchema,
-  execute: executeSleep,
-});
-```
-
-</Step>
-
-<Step>
-### Understand the Context Requirement
-
-The `sleep()` function must be called from within a workflow context, not from within a step. This is why `executeSleep` does not have `"use step"` - it runs in the workflow context where `sleep()` is available.
-</Step>
-
-</Steps>
-
-## Emitting Progress Updates
-
-When sleeping for long durations, emit a progress update so the UI can display the waiting state:
-
-<Steps>
-
-<Step>
-### Create an Emit Helper
-
-```typescript lineNumbers
-async function emitWaitingStatus(message: string, toolCallId: string) {
-  'use step';
-
-  const writable = getWritable<UIMessageChunk>();
-  const writer = writable.getWriter();
-
-  await writer.write({
-    id: toolCallId,
-    type: 'data-wait',
-    data: { text: message },
-  });
-
-  writer.releaseLock();
+  await emitSleepStatus({ durationMs }, { toolCallId }); // [!code highlight]
+  await sleep(durationMs);
 }
 ```
 
 </Step>
 
 <Step>
-### Use in Tool Execution
+### Show the tool status in the UI
 
 ```typescript lineNumbers
-async function executeScheduleTask(
-  { delayMinutes, taskName }: { delayMinutes: number; taskName: string },
-  { toolCallId }: { toolCallId: string }
-) {
-  await emitWaitingStatus(
-    `Scheduled "${taskName}" to run in ${delayMinutes} minutes`,
-    toolCallId
-  );
-
-  await sleep(`${delayMinutes}m`); // [!code highlight]
-
-  return `Task "${taskName}" is now ready to execute`;
-}
+// In your message rendering logic:
+{message.parts.map((part, i) => {
+  if (part.type === 'text') {
+    return <span key={i}>{part.text}</span>;
+  }
+  if (part.type === 'data-wait') { // [!code highlight]
+    return <div key={i}><WaitIcon />{part.data.text}...</div>; // [!code highlight]
+  } // [!code highlight]
+  return null;
+})}
 ```
 
 </Step>
@@ -129,6 +115,8 @@ async function executeScheduleTask(
 </Steps>
 
 ## Use Cases
+
+Aside from providing `sleep()` as a tool, there are other use cases for Agents that commonly call for suspension and resumption.
 
 ### Rate Limiting
 
