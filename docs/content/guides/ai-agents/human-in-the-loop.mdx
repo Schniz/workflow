@@ -2,46 +2,48 @@
 title: Human-in-the-Loop
 ---
 
-An extremely common feature necessary for running AI agents in production is the ability to wait for human input or external events before proceeding.
+A common pre-requisite for running AI agents in production is the ability to wait for human input or external events before proceeding.
 
 Workflow DevKit's [webhook](/docs/api-reference/workflow/create-webhook) and [hook](/docs/api-reference/workflow/define-hook) primitives enable "human-in-the-loop" patterns where workflows pause until a human takes action, allowing smooth resumption of workflows even after days of inactivity, and provides stability across code deployments.
+
+If you need to react to external events programmatically, see the [hooks](/docs/foundations/hooks) documentation for more information. This part of the guide will focus on the human-in-the-loop pattern, which is a subset of the more general hook pattern.
 
 ## How It Works
 
 <Steps>
 
 <Step>
-`createWebhook()` or `createHook()` generates a unique URL (or token) that can resume a workflow. This can be packaged as a tool for the Agent to call, or used directly in your backend code.
+`createWebhook()` generates a unique URL that can be used to resume a workflow. This can be packaged as a tool for the Agent to call, or used directly in your backend code.
 </Step>
 
 <Step>
-The workflow emits a data chunk containing the webhook URL, sending it to the consumer of the workflow, such as a chat UI, or an external service.
+The workflow emits a data chunk containing the webhook URL, sending it to the consumer of the workflow, such as a chat UI.
 </Step>
 
 <Step>
-The workflow pauses at `await webhook` - no compute resources are consumed.
+The workflow pauses at `await webhook` - no compute resources are consumed while waiting for the human to take action.
 </Step>
 
 <Step>
-The consumer of the workflow calls the webhook URL, sending data back to the workflow.
+The user of the workflow (e.g. a human in a chat UI) calls the webhook URL, optionally sending data back to the workflow.
 </Step>
 
 <Step>
-The workflow receives any data sent with the webhook (approval status, comments) and resumes execution.
+The workflow receives any data sent with the webhook (e.g. approval status, comments) and resumes execution.
 </Step>
 
 </Steps>
 
 ## Creating an Approval Tool
 
-Add a tool that pauses the agent until a human approves or rejects:
+Add a tool that allows the agent to deliberately pauses execution until a human approves or rejects:
 
 <Steps>
 
 <Step>
 ### Implement the tool
 
-The execute function creates a webhook and waits for approval:
+Create a tool with an execute function that creates a webhook and emits a data chunk containing the webhook URL.
 
 ```typescript title="ai/tools/human-approval.ts" lineNumbers
 import { tool, type UIMessageChunk } from 'ai';
@@ -102,7 +104,7 @@ async function emitApprovalRequest(
 ```
 
 <Callout type="info">
-The `createWebhook()` function must be called from within a workflow context, not from a step. This is why `executeHumanApproval` does not have `"use step"`.
+The `createWebhook()` function must be called from within a workflow context, not from a step. This is why `executeHumanApproval` does not have `"use step"`, but the stream write operation requires a step context, which is why `emitApprovalRequest` is a separate function with `"use step"`.
 </Callout>
 </Step>
 
@@ -329,71 +331,6 @@ This API can be called by:
 </Tab>
 
 </Tabs>
-
-## Use Cases
-
-### Email Approval
-
-Wait for approval before sending an email to customers:
-
-```typescript lineNumbers
-async function executeSendEmail(
-  { recipients, subject, body }: EmailParams,
-  { toolCallId }: { toolCallId: string }
-) {
-  const webhook = createWebhook();
-
-  await emitEmailApproval({
-    url: webhook.url,
-    recipients,
-    subject,
-    preview: body.substring(0, 200),
-  }, toolCallId);
-
-  const request = await webhook;
-  const { approved } = await request.json();
-
-  if (!approved) {
-    return 'Email cancelled by user';
-  }
-
-  await sendEmail({ recipients, subject, body });
-  return `Email sent to ${recipients.length} recipients`;
-}
-```
-
-### Multi-Step Approval
-
-Chain multiple approvals for high-risk actions:
-
-```typescript lineNumbers
-export async function criticalActionWorkflow(action: string) {
-  'use workflow';
-
-  // First approval: Team lead
-  const leadApproval = await requestApproval({
-    role: 'team-lead',
-    action,
-  });
-
-  if (!leadApproval.approved) {
-    return { status: 'rejected', stage: 'team-lead' };
-  }
-
-  // Second approval: Manager
-  const managerApproval = await requestApproval({
-    role: 'manager',
-    action,
-  });
-
-  if (!managerApproval.approved) {
-    return { status: 'rejected', stage: 'manager' };
-  }
-
-  await executeCriticalAction(action);
-  return { status: 'completed' };
-}
-```
 
 ## Related Documentation
 

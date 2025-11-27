@@ -2,11 +2,13 @@
 title: Building Durable AI Agents
 ---
 
-AI agents are built on the primitive of LLM and tool-call loops, often with additional processes for data fetching, resource provisioning, or reacting to external events. Workflow DevKit makes your agents production-ready, by turning your agents into durable, resumable workflows, and managing your LLM calls, tool executions, and other async operations as retryable and observable steps.
+AI agents are built on the primitive of LLM and tool-call loops, often with additional processes for data fetching, resource provisioning, or reacting to external events.
+
+Workflow DevKit makes your agents production-ready, by turning them into durable, resumable workflows, and managing your LLM calls, tool executions, and other async operations as retryable and observable steps.
 
 <AgentTraces />
 
-This guide walks through converting a basic AI SDK agent into a durable agent using Workflow DevKit.
+This guide walks you through converting a basic AI SDK agent into a durable agent using Workflow DevKit.
 
 ## Why Durable Agents?
 
@@ -364,16 +366,11 @@ Run your development server, then open the observability dashboard to see your w
 npx workflow web
 ```
 
-This opens a local dashboard showing:
-
-- All workflow runs and their status
-- Individual step executions with timing
-- Errors and retry attempts
-- Stream data flowing through the workflow
+This opens a local dashboard showing all workflow runs and their status, as well as a trace viewer to inspect the workflow in detail, including retry attempts, and the data being passed between steps.
 
 ## Next Steps
 
-Now that you have a basic durable agent, explore these additional capabilities:
+Now that you have a basic durable agent, explore these additional features:
 
 <Cards>
   <Card title="Resumable Streams" href="/guides/ai-agents/resumable-streams">
@@ -555,7 +552,6 @@ export function Chat() {
 
 ## Related Documentation
 
-- [AI & Agents Overview](/docs/ai-agents) - Documentation hub for AI agent features
 - [Defining Tools](/docs/ai-agents/defining-tools) - Tool patterns and execute context
 - [`DurableAgent` API Reference](/docs/api-reference/workflow-ai/durable-agent) - Full API documentation
 - [Workflows and Steps](/docs/foundations/workflows-and-steps) - Core concepts

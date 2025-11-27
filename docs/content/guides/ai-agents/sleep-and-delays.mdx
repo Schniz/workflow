@@ -2,25 +2,22 @@
 title: Sleep, Suspense, and Scheduling
 ---
 
-AI agents sometimes need to pause execution in order to schedule recurring or future actions, wait before retrying an operation (e.g. for rate limiting), or wait for external state to be available. Workflow DevKit's [`sleep()`](/docs/api-reference/workflow/sleep) function enables Agents to pause execution without consuming compute resources, and resume at specified times.
-This sleep operation survives restarts, deploys, and infrastructure changes, and the duration can span seconds, hours, days, or months.
+AI agents sometimes need to pause execution in order to schedule recurring or future actions, wait before retrying an operation (e.g. for rate limiting), or wait for external state to be available.
+
+Workflow DevKit's `sleep` function enables Agents to pause execution without consuming resources, and resume at a specified time, after a specified duration, or in response to an external event. Workflow operation that suspend will survive restarts, new deploys, and infrastructure changes, independent of whether the suspense takes seconds or months.
 
 <Callout type="info">
-See the [`sleep()` API Reference](/docs/api-reference/workflow/sleep) for the full list of supported duration formats and detailed API documentation.
+See the [`sleep()` API Reference](/docs/api-reference/workflow/sleep) for the full list of supported duration formats and detailed API documentation, and see the [hooks](/docs/foundations/hooks) documentation for more information on how to resume in response to external events.
 </Callout>
 
 ## Adding a Sleep Tool
 
-Create a tool that allows the agent to pause for a specified duration:
+We can expose the sleep tool directly to the Agent by wrapping it in a tool.
 
 <Steps>
 
 <Step>
 ### Define the Tool
-
-First, we make the `sleep()` function available to the AI Agent by packaging it as a tool.
-
-Note that the `sleep()` function must be called from within a workflow context, not from within a step. This is why `executeSleep` does not have `"use step"` - it runs in the workflow context where `sleep()` is available.
 
 ```typescript title="ai/tools/sleep.ts" lineNumbers
 import { tool } from 'ai';
@@ -50,12 +47,13 @@ export const sleepTool = tool({
 });
 ```
 
-</Step>
+Note that the `sleep()` function must be called from within a workflow context, not from within a step. This is why `executeSleep` does not have `"use step"` - it runs in the workflow context where `sleep()` is available.
 
+</Step>
 <Step>
 ### Emitting status updates
 
-We want the UI to display the waiting state, so we emit a new chunk type `data-wait`, that the UI can then consume.
+We want the UI to react to the tool call status, so we emit a new chunk type `data-wait`, that the UI can then consume.
 
 ```typescript lineNumbers
 // This is just a helper function to emit the sleep status to the UI

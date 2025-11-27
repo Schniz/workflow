@@ -51,10 +51,10 @@ Tools can emit real-time updates by writing to the workflow's output stream. Sin
 async function emitProgress(status: string, toolCallId: string) {
   'use step'; // [!code highlight]
 
-  const writable = getWritable<UIMessageChunk>();
-  const writer = writable.getWriter();
+  const writable = getWritable<UIMessageChunk>(); // [!code highlight]
+  const writer = writable.getWriter(); // [!code highlight]
 
-  await writer.write({
+  await writer.write({ // [!code highlight]
     id: toolCallId,
     type: 'data-status',
     data: { status },
@@ -64,9 +64,10 @@ async function emitProgress(status: string, toolCallId: string) {
 }
 
 async function executeSearch({ query }: { query: string }, { toolCallId }: { toolCallId: string }) {
-  await emitProgress('searching', toolCallId);
+  'use step';
+  await emitProgress('searching', toolCallId); // [!code highlight]
   const results = await performSearch(query);
-  await emitProgress('complete', toolCallId);
+  await emitProgress('complete', toolCallId); // [!code highlight]
   return results;
 }
 ```
@@ -75,14 +76,14 @@ async function executeSearch({ query }: { query: string }, { toolCallId }: { too
 
 Tools can run at two levels with different capabilities:
 
-| Capability | Step-Level (`"use step"`) | Workflow-Level |
+| Capability | Step-Level (`"use step"`) | Workflow-Level (`"use workflow"`) |
 |------------|---------------------------|----------------|
 | `getWritable()` | ✅ | ❌ |
 | Automatic retries | ✅ | ❌ |
 | `sleep()` | ❌ | ✅ |
 | `createWebhook()` | ❌ | ✅ |
 
-Most tools combine both: use step functions for I/O operations, and keep the execute function at the workflow level for orchestration:
+Tools can combine both: use a step function for I/O operations, and keep the execute function at the workflow level for orchestration:
 
 ```typescript lineNumbers
 // Step: handles I/O with retries

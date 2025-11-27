@@ -2,27 +2,13 @@
 title: Resumable Streams
 ---
 
-When building chat interfaces, network interruptions or page refreshes can break the connection to an in-progress agent. Workflow DevKit provides [`WorkflowChatTransport`](/docs/api-reference/workflow-ai/workflow-chat-transport), a drop-in transport for the AI SDK that enables automatic stream reconnection.
+When building chat interfaces, network interruptions, page refreshes, or serverless function timeouts can break the connection to an in-progress agent.
 
-## The Problem
+Where a standard chat implementation would require the user to resend their message and wait for the entire response again, Workflow DevKit provides [`WorkflowChatTransport`](/docs/api-reference/workflow-ai/workflow-chat-transport), a drop-in transport for the AI SDK that enables automatic stream reconnection.
 
-A typical chat application loses state when:
+## Implementing stream resumption
 
-- The user refreshes the page during a response
-- Network connectivity drops temporarily
-- Serverless function timeouts occur mid-stream
-
-With a standard chat implementation, users must resend their message and wait for the entire response again.
-
-## The Solution
-
-`WorkflowChatTransport` solves this by:
-
-1. Tracking the workflow run ID returned from your API
-2. Automatically reconnecting to the stream from the last received chunk
-3. Storing the run ID for session resumption across page loads
-
-## Implementation
+Getting stream resumption requires both adding `WorkflowChatTransport` (to allow the client to reconnect to the stream) and some client-side state management, in order to know when and where to reconnect to the stream.
 
 <Steps>
 
@@ -56,7 +42,7 @@ export async function POST(req: Request) {
 <Step>
 ### Add a Stream Reconnection Endpoint
 
-Create an endpoint that returns the stream for an existing run:
+Create a new API route that returns the stream for an existing run:
 
 ```typescript title="app/api/chat/[id]/stream/route.ts" lineNumbers
 import { createUIMessageStreamResponse } from 'ai';
@@ -89,7 +75,7 @@ The `startIndex` parameter ensures the client only receives chunks it missed, av
 <Step>
 ### Use `WorkflowChatTransport` in the Client
 
-Replace the default transport in `useChat` with `WorkflowChatTransport`:
+Replace the default transport in `useChat` with `WorkflowChatTransport`, and store the latest run ID.
 
 ```typescript title="app/chat.tsx" lineNumbers
 'use client';
@@ -178,167 +164,7 @@ export function Chat() {
 6. The reconnection endpoint returns the stream from where the client left off
 7. When the stream completes, `onChatEnd` clears the stored run ID
 
-## Handling Page Refreshes
-
-The `resume` option tells `useChat` to attempt reconnection on mount. Combined with localStorage persistence, this enables seamless recovery:
-
-```typescript lineNumbers
-const activeRunId = useMemo(() => {
-  if (typeof window === 'undefined') return;
-  return localStorage.getItem('active-workflow-run-id') ?? undefined;
-}, []);
-
-const { messages, sendMessage } = useChat({
-  resume: Boolean(activeRunId), // Attempt to resume if a run ID exists // [!code highlight]
-  transport: new WorkflowChatTransport({ /* ... */ }),
-});
-```
-
-When the user refreshes the page:
-
-1. The component checks localStorage for an active run ID
-2. If found, `resume: true` triggers a reconnection attempt
-3. The transport fetches the stream from the last known position
-4. Messages continue appearing where they left off
-
-## Error Handling
-
-Configure retry behavior with `maxConsecutiveErrors`:
-
-```typescript lineNumbers
-new WorkflowChatTransport({
-  maxConsecutiveErrors: 5, // Give up after 5 consecutive failures // [!code highlight]
-  // ...
-})
-```
-
-The transport automatically retries reconnection on network errors. After reaching the limit, it stops attempting and surfaces the error.
-
-## Complete Example
-
-<Tabs items={['Chat Endpoint', 'Reconnect Endpoint', 'Client']}>
-
-<Tab value="Chat Endpoint">
-
-```typescript title="app/api/chat/route.ts" lineNumbers
-import { createUIMessageStreamResponse, convertToModelMessages } from 'ai';
-import { start } from 'workflow/api';
-import { chatWorkflow } from './workflow';
-
-export async function POST(req: Request) {
-  const { messages, modelId } = await req.json();
-  const modelMessages = convertToModelMessages(messages);
-
-  const run = await start(chatWorkflow, [{ messages: modelMessages, modelId }]);
-
-  return createUIMessageStreamResponse({
-    stream: run.readable,
-    headers: {
-      'x-workflow-run-id': run.runId,
-    },
-  });
-}
-```
-
-</Tab>
-
-<Tab value="Reconnect Endpoint">
-
-```typescript title="app/api/chat/[id]/stream/route.ts" lineNumbers
-import { createUIMessageStreamResponse } from 'ai';
-import { getRun } from 'workflow/api';
-
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  const { searchParams } = new URL(request.url);
-
-  const startIndexParam = searchParams.get('startIndex');
-  const startIndex = startIndexParam
-    ? parseInt(startIndexParam, 10)
-    : undefined;
-
-  const run = getRun(id);
-  const stream = run.getReadable({ startIndex });
-
-  return createUIMessageStreamResponse({ stream });
-}
-```
-
-</Tab>
-
-<Tab value="Client">
-
-```typescript title="app/chat.tsx" lineNumbers
-'use client';
-
-import { useChat } from '@ai-sdk/react';
-import { WorkflowChatTransport } from '@workflow/ai';
-import { useMemo, useState } from 'react';
-
-export function Chat() {
-  const [input, setInput] = useState('');
-
-  const activeRunId = useMemo(() => {
-    if (typeof window === 'undefined') return;
-    return localStorage.getItem('active-workflow-run-id') ?? undefined;
-  }, []);
-
-  const { messages, sendMessage, status } = useChat({
-    resume: Boolean(activeRunId),
-    transport: new WorkflowChatTransport({
-      api: '/api/chat',
-      onChatSendMessage: (response) => {
-        const workflowRunId = response.headers.get('x-workflow-run-id');
-        if (workflowRunId) {
-          localStorage.setItem('active-workflow-run-id', workflowRunId);
-        }
-      },
-      onChatEnd: () => {
-        localStorage.removeItem('active-workflow-run-id');
-      },
-      prepareReconnectToStreamRequest: ({ api, ...rest }) => {
-        const runId = localStorage.getItem('active-workflow-run-id');
-        if (!runId) throw new Error('No active workflow run ID found');
-        return {
-          ...rest,
-          api: `/api/chat/${encodeURIComponent(runId)}/stream`,
-        };
-      },
-      maxConsecutiveErrors: 5,
-    }),
-  });
-
-  return (
-    <div>
-      {messages.map((m) => (
-        <div key={m.id}>
-          <strong>{m.role}:</strong> {m.content}
-        </div>
-      ))}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          sendMessage({ text: input });
-          setInput('');
-        }}
-      >
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type a message..."
-        />
-      </form>
-    </div>
-  );
-}
-```
-
-</Tab>
-
-</Tabs>
+This approach also handles page refreshes, as the client will automatically reconnect to the stream from the last known position when the UI loads with a stored run ID.
 
 ## Related Documentation
 
