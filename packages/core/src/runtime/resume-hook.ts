@@ -97,7 +97,7 @@ export async function resumeHook<T = any>(
           },
         });
 
-        const workflowRun = await world.runs.get(hook.runId);
+        let workflowRun = await world.runs.get(hook.runId);
 
         span?.setAttributes({
           ...Attribute.WorkflowName(workflowRun.workflowName),
@@ -113,7 +113,9 @@ export async function resumeHook<T = any>(
         }
 
         if (workflowRun.status === 'paused') {
-          await world.runs.update(hook.runId, { status: 'running' });
+          workflowRun = await world.runs.update(hook.runId, {
+            status: 'running',
+          });
         }
 
         // Re-trigger the workflow against the deployment ID associated
