@@ -164,15 +164,6 @@ server.get('/api/trigger', async (req: any, reply) => {
           const { done, value } = await reader.read();
           if (done) break;
 
-          if (chunkCount < 4) {
-            console.log(
-              '[fastify output-stream] chunk',
-              chunkCount,
-              value?.constructor?.name,
-              typeof value,
-              value
-            );
-          }
           chunkCount += 1;
 
           const framed = toFramedChunk(value);
