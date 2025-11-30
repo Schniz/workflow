@@ -69,6 +69,7 @@ jobs:
           path: |
             node_modules
             packages/*/dist
+            docs/public
           retention-days: 1
   #
   # # Phase 2a: Local benchmarks (no postgres)
