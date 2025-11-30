@@ -30,12 +30,16 @@ const streamToStreamId = (value: any): string => {
   return `${STREAM_ID_PREFIX}null`;
 };
 
-const functionToFunctionId = (value: any): string => {
-  if ('name' in value) {
-    const name = String(value.name);
-    return `<fn:${name}>`;
+const serializedStepFunctionToString = (value: unknown): string => {
+  if (!value) return 'null';
+  if (typeof value !== 'object') return 'null';
+  if ('stepId' in value) {
+    const stepId = value.stepId;
+    // TODO: Add closure vars to the string representation.
+    // value.closureVars
+    return `<step:${stepId}>`;
   }
-  return `<fn>`;
+  return '<function>';
 };
 
 /**
@@ -49,7 +53,7 @@ const streamPrintRevivers: Record<string, (value: any) => any> = {
   ReadableStream: streamToStreamId,
   WritableStream: streamToStreamId,
   TransformStream: streamToStreamId,
-  StepFunction: functionToFunctionId,
+  StepFunction: serializedStepFunctionToString,
 };
 
 const hydrateStepIO = <
