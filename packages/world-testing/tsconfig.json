@@ -8,5 +8,5 @@
     "lib": ["ES2024"]
   },
   "include": ["src", ".well-known"],
-  "exclude": ["node_modules", "**/*.test.ts"]
+  "exclude": ["node_modules", "**/*.test.ts", "bench"]
 }
