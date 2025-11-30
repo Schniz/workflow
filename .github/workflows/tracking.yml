@@ -24,4 +24,4 @@ jobs:
           name: build-artifacts
           id: build-artifacts
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ context.payload.workflow_run.id || github.event.inputs.run_id }}
+          run-id: ${{ github.event.workflow_run.id || github.event.inputs.run_id }}
