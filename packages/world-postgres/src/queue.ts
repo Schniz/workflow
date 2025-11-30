@@ -84,7 +84,14 @@ export function createQueue(
     await createQueue(jobName);
     await Promise.all(
       Array.from({ length: config.queueConcurrency || 10 }, async () => {
-        await boss.work(jobName, work);
+        await boss.work(
+          jobName,
+          {
+            // turns out pg-boss is not using NOTIFY/LISTEN for job polling
+            pollingIntervalSeconds: 0.5,
+          },
+          work
+        );
       })
     );
 
