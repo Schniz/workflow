@@ -2,11 +2,36 @@
 title: Streaming Updates from Tools
 ---
 
-Tools can emit progress updates to the same stream the agent uses. This allows the UI to display tool status.
+After [building a durable AI agent](/guides/ai-agents), we already get UI message chunks for displaying tool invocations and return values. However, for long-running steps, we may want to show progress updates, or stream step output to the user while it's being generated.
 
-<Tabs items={['Tool', 'Client']}>
+Workflow DevKit enables this by letting step functions write custom chunks to the same stream the agent uses. These chunks appear as data parts in your messages, which you can render however you like.
 
-<Tab value="Tool">
+<Steps>
+
+<Step>
+### Define Your Data Part Type
+
+First, define a TypeScript type for your custom data part. This ensures type safety across your tool and client code:
+
+```typescript title="types/chat.ts" lineNumbers
+export interface SearchWebDataPart {
+  type: 'data-search-web'; // [!code highlight]
+  id: string;
+  data: {
+    url: string;
+    status: 'fetching' | 'done';
+  };
+}
+```
+
+The `type` field must be a string starting with `data-` followed by your custom identifier. The `id` field should match the `toolCallId` so the client can associate the data with the correct tool invocation.
+
+</Step>
+
+<Step>
+### Emit Updates from Your Tool
+
+Use [`getWritable()`](/docs/api-reference/workflow/get-writable) inside a step function to get a handle to the stream. Write your custom chunks as the tool progresses:
 
 ```typescript title="ai/tools/search-web.ts" lineNumbers
 import { tool } from 'ai';
@@ -21,25 +46,25 @@ async function executeSearch(
   'use step';
 
   const writable = getWritable<UIMessageChunk>(); // [!code highlight]
-  const writer = writable.getWriter(); // [!code highlight]
+  const writer = writable.getWriter();
 
-  // Emit a progress update // [!code highlight]
-  await writer.write({ // [!code highlight]
-    id: toolCallId, // [!code highlight]
+  // Emit a progress update
+  await writer.write({
     type: 'data-search-web', // [!code highlight]
-    data: { url, status: 'fetching' }, // [!code highlight]
-  }); // [!code highlight]
+    id: toolCallId, // [!code highlight]
+    data: { url, status: 'fetching' },
+  });
 
   const response = await fetch(url);
   const content = await response.text();
 
-  await writer.write({ // [!code highlight]
-    id: toolCallId, // [!code highlight]
-    type: 'data-search-web', // [!code highlight]
-    data: { url, status: 'done' }, // [!code highlight]
-  }); // [!code highlight]
+  await writer.write({
+    type: 'data-search-web',
+    id: toolCallId,
+    data: { url, status: 'done' },
+  });
 
-  writer.releaseLock(); // [!code highlight]
+  writer.releaseLock();
 
   return content;
 }
@@ -51,61 +76,81 @@ export const searchWeb = tool({
 });
 ```
 
-</Tab>
+Key points:
 
-<Tab value="Client">
+- Call `getWritable<UIMessageChunk>()` to get the stream
+- Use `getWriter()` to acquire a writer
+- Write objects with `type`, `id`, and `data` fields
+- Always call `releaseLock()` when done writing
 
-Handle the `data-search-web` chunks in your client to display progress. Data parts are stored in the message, so you can find the latest status directly:
+</Step>
+
+<Step>
+### Handle Data Parts in the Client
+
+Update your chat component to detect and render the custom data parts. Data parts are stored in the message's `parts` array alongside text and tool invocation parts:
 
 ```typescript title="app/chat.tsx" lineNumbers
-'use client';
+{message.parts.map((part, partIndex) => {
+  // Render text parts
+  if (part.type === 'text') {
+    return (
+      <Response key={`${message.id}-text-${partIndex}`}>
+        {part.text}
+      </Response>
+    );
+  }
 
-import { useChat } from '@ai-sdk/react';
+  // Render tool parts with progress status // [!code highlight]
+  if (part.type === 'tool-searchWeb') { // [!code highlight]
+    if (!('toolCallId' in part) || !('state' in part)) {
+      return null;
+    }
 
-export function Chat() {
-  const { messages, input, handleInputChange, handleSubmit } = useChat({
-    api: '/api/chat',
-  });
+    // Find the latest data part for this tool call // [!code highlight]
+    const dataPart = message.parts.findLast( // [!code highlight]
+      (p) => p.type === 'data-search-web' && p.id === part.toolCallId // [!code highlight]
+    ); // [!code highlight]
 
-  return (
-    <div>
-      {messages.map((m) => (
-        <div key={m.id}>
-          <strong>{m.role}:</strong>
-          {m.parts.map((part, i) => {
-            if (part.type === 'text') {
-              return <span key={i}>{part.text}</span>;
-            }
-            if (part.type === 'tool-invocation') {
-              // Find the latest data part for this tool call // [!code highlight]
-              const dataPart = m.parts.findLast( // [!code highlight]
-                (p) => p.type === 'data' && p.id === part.toolInvocation.toolCallId // [!code highlight]
-              ); // [!code highlight]
-              const status = dataPart?.type === 'data' ? dataPart.data : null; // [!code highlight]
-              return (
-                <div key={i}>
-                  {status?.status === 'fetching' // [!code highlight]
-                    ? `Fetching ${status.url}...` // [!code highlight]
-                    : `Called ${part.toolInvocation.toolName}`} // [!code highlight]
-                </div>
-              );
-            }
-            return null;
-          })}
-        </div>
-      ))}
-      <form onSubmit={handleSubmit}>
-        <input
-          value={input}
-          onChange={handleInputChange}
-          placeholder="Type a message..."
-        />
-      </form>
-    </div>
-  );
-}
+    // Extract status from the data part // [!code highlight]
+    const status = // [!code highlight]
+      dataPart && 'data' in dataPart // [!code highlight]
+        ? (dataPart.data as { status: string; url: string }) // [!code highlight]
+        : null; // [!code highlight]
+
+    return (
+      <Tool key={part.toolCallId}>
+        <ToolHeader type={part.type} state={part.state} />
+        <ToolContent>
+          {status?.status === 'fetching' && ( // [!code highlight]
+            <div className="text-muted-foreground text-sm"> // [!code highlight]
+              Fetching {status.url}... // [!code highlight]
+            </div> // [!code highlight]
+          )} // [!code highlight]
+          {part.state === 'output-available' && (
+            <ToolOutput output={renderToolOutput(part)} />
+          )}
+        </ToolContent>
+      </Tool>
+    );
+  }
+
+  return null;
+})}
 ```
 
-</Tab>
+The pattern is:
 
-</Tabs>
+1. When rendering a tool invocation part, search for matching data parts using `findLast()`
+2. Match by comparing the data part's `id` to the tool's `toolCallId`
+3. Use the data part's payload to display progress or intermediate results
+
+</Step>
+
+</Steps>
+
+## Related Documentation
+
+- [Building Durable AI Agents](/guides/ai-agents) - Complete guide to durable agents
+- [`getWritable()` API Reference](/docs/api-reference/workflow/get-writable) - Stream API details
+- [Streaming](/docs/foundations/streaming) - Understanding workflow streams

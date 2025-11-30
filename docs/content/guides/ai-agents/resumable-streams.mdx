@@ -8,7 +8,9 @@ Where a standard chat implementation would require the user to resend their mess
 
 ## Implementing stream resumption
 
-Getting stream resumption requires both adding `WorkflowChatTransport` (to allow the client to reconnect to the stream) and some client-side state management, in order to know when and where to reconnect to the stream.
+We can enable stream resumption by adding the `WorkflowChatTransport` middleware to our `useChat` hook (to allow the client to reconnect to the stream), and then adding some client-side state management, in order to know when and where to reconnect to the stream.
+
+The examples below assume you have a basic Agent that compatible with one we built in the [Building Durable AI Agents](/guides/ai-agents) guide.
 
 <Steps>
 
