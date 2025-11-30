@@ -112,6 +112,36 @@ async function executeSleep(
 
 </Steps>
 
+## Step-Level vs Workflow-Level Tools
+
+Tools can be implemented either at the step level or the workflow level, with different capabilities and constraints.
+
+| Capability | Step-Level (`"use step"`) | Workflow-Level (`"use workflow"`) |
+|------------|---------------------------|----------------|
+| `getWritable()` | ✅ | ❌ |
+| Automatic retries | ✅ | ❌ |
+| Side-effects (e.g. API calls) allowed | ✅ | ❌ |
+| `sleep()` | ❌ | ✅ |
+| `createWebhook()` | ❌ | ✅ |
+
+Tools can also combine both by starting out on the workflow level, and calling into steps for I/O operations, like so:
+
+```typescript lineNumbers
+// Step: handles I/O with retries
+async function performFetch(url: string) {
+  'use step';
+  const response = await fetch(url);
+  return response.json();
+}
+
+// Workflow-level: orchestrates steps and can use sleep()
+async function executeFetchWithDelay({ url }: { url: string }) {
+  const result = await performFetch(url);
+  await sleep('5s'); // Only available at workflow level
+  return result;
+}
+```
+
 ## Use Cases
 
 Aside from providing `sleep()` as a tool, there are other use cases for Agents that commonly call for suspension and resumption.
