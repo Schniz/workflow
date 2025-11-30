@@ -1,5 +1,11 @@
 # @workflow/core
 
+## 4.0.1-beta.20
+
+### Patch Changes
+
+- 0f1645b: Ignore rejections in `waitedUntil` promise
+
 ## 4.0.1-beta.19
 
 ### Patch Changes

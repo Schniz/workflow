@@ -1,5 +1,15 @@
 # @workflow/sveltekit
 
+## 4.0.0-beta.17
+
+### Patch Changes
+
+- Updated dependencies [5b91861]
+- Updated dependencies [0cacb99]
+  - @workflow/swc-plugin@4.0.1-beta.9
+  - @workflow/builders@4.0.1-beta.19
+  - @workflow/rollup@4.0.0-beta.3
+
 ## 4.0.0-beta.16
 
 ### Patch Changes
