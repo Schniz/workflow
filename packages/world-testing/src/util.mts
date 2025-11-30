@@ -35,9 +35,11 @@ export async function startServer(opts: { world: string }) {
       CONTROL_FD: '3',
     },
   });
-  onTestFinished(() => {
-    proc.kill();
-  });
+  try {
+    onTestFinished(() => {
+      proc.kill();
+    });
+  } catch {}
 
   const stdio = [] as { stream: ChalkInstance; chunk: string }[];
   proc.stdout?.on('data', (chunk) => {
@@ -47,22 +49,35 @@ export async function startServer(opts: { world: string }) {
     stdio.push({ stream: chalk.red, chunk: chunk.toString() });
   });
 
-  onTestFailed(() => {
-    console.log('=== SERVER STDIO ===');
-    let buffer = '';
-    for (const { stream, chunk } of stdio) {
-      buffer += stream.inverse(chunk);
+  try {
+    const log = () => {
+      console.log('=== SERVER STDIO ===');
+      let buffer = '';
+      for (const { stream, chunk } of stdio) {
+        buffer += stream.inverse(chunk);
+      }
+      console.log(buffer);
+    };
+    if (process.env.WORKFLOW_WORLD_TESTING_PRINT_SERVER_STDIO === '1') {
+      onTestFinished(log);
+    } else {
+      onTestFailed(log);
     }
-    console.log(buffer);
-  });
+  } catch {}
 
   const fd3 = proc.stdio[3];
   assert(fd3, 'fd3 should be defined');
 
   for await (const chunk of fd3.pipe(jsonlines.parse())) {
-    return Control.parse(chunk);
+    return {
+      ...Control.parse(chunk),
+      close() {
+        proc.kill();
+      },
+    };
   }
 
+  proc.kill();
   throw new Error('Server did not start correctly');
 }
 
@@ -83,9 +98,11 @@ export function createFetcher(control: Control) {
         body: JSON.stringify({ file, workflow, args }),
       });
       const data = await x.json().then(Invoke.parse);
-      onTestFailed(() => {
-        console.error('Workflow run:', data.runId);
-      });
+      try {
+        onTestFailed(() => {
+          console.error('Workflow run:', data.runId);
+        });
+      } catch {}
       return data;
     },
     async getRun(id: string) {
