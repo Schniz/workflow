@@ -24,3 +24,6 @@ jobs:
           run-id: ${{ github.event.workflow_run.id || github.event.inputs.run_id }}
       - name: log all files
         run: ls -R
+      - uses: Schniz/benchy-action@v2
+        with:
+          track_file_size: docs/public/*.tgz
