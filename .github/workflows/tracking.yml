@@ -1,0 +1,26 @@
+on:
+  workflow_run:
+    types: [completed]
+    workflows: ["Performance Benchmarks"]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        type: string
+        description: "The run ID of the Performance Benchmarks workflow to track"
+
+jobs:
+  store_and_comment:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      id-token: write
+    name: Store Benchmark Results and Comment on PR
+    steps:
+      - name: Download Benchmark Artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: build-artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id || github.event.inputs.run_id }}
+      - name: log all files
+        run: ls -R
