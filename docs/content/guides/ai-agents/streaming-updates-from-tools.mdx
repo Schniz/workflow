@@ -1,0 +1,111 @@
+---
+title: Streaming Updates from Tools
+---
+
+Tools can emit progress updates to the same stream the agent uses. This allows the UI to display tool status.
+
+<Tabs items={['Tool', 'Client']}>
+
+<Tab value="Tool">
+
+```typescript title="ai/tools/search-web.ts" lineNumbers
+import { tool } from 'ai';
+import { getWritable } from 'workflow';
+import { z } from 'zod';
+import type { UIMessageChunk } from 'ai';
+
+async function executeSearch(
+  { url }: { url: string },
+  { toolCallId }: { toolCallId: string }
+) {
+  'use step';
+
+  const writable = getWritable<UIMessageChunk>(); // [!code highlight]
+  const writer = writable.getWriter(); // [!code highlight]
+
+  // Emit a progress update // [!code highlight]
+  await writer.write({ // [!code highlight]
+    id: toolCallId, // [!code highlight]
+    type: 'data-search-web', // [!code highlight]
+    data: { url, status: 'fetching' }, // [!code highlight]
+  }); // [!code highlight]
+
+  const response = await fetch(url);
+  const content = await response.text();
+
+  await writer.write({ // [!code highlight]
+    id: toolCallId, // [!code highlight]
+    type: 'data-search-web', // [!code highlight]
+    data: { url, status: 'done' }, // [!code highlight]
+  }); // [!code highlight]
+
+  writer.releaseLock(); // [!code highlight]
+
+  return content;
+}
+
+export const searchWeb = tool({
+  description: 'Read a web page and return the content',
+  inputSchema: z.object({ url: z.string() }),
+  execute: executeSearch,
+});
+```
+
+</Tab>
+
+<Tab value="Client">
+
+Handle the `data-search-web` chunks in your client to display progress. Data parts are stored in the message, so you can find the latest status directly:
+
+```typescript title="app/chat.tsx" lineNumbers
+'use client';
+
+import { useChat } from '@ai-sdk/react';
+
+export function Chat() {
+  const { messages, input, handleInputChange, handleSubmit } = useChat({
+    api: '/api/chat',
+  });
+
+  return (
+    <div>
+      {messages.map((m) => (
+        <div key={m.id}>
+          <strong>{m.role}:</strong>
+          {m.parts.map((part, i) => {
+            if (part.type === 'text') {
+              return <span key={i}>{part.text}</span>;
+            }
+            if (part.type === 'tool-invocation') {
+              // Find the latest data part for this tool call // [!code highlight]
+              const dataPart = m.parts.findLast( // [!code highlight]
+                (p) => p.type === 'data' && p.id === part.toolInvocation.toolCallId // [!code highlight]
+              ); // [!code highlight]
+              const status = dataPart?.type === 'data' ? dataPart.data : null; // [!code highlight]
+              return (
+                <div key={i}>
+                  {status?.status === 'fetching' // [!code highlight]
+                    ? `Fetching ${status.url}...` // [!code highlight]
+                    : `Called ${part.toolInvocation.toolName}`} // [!code highlight]
+                </div>
+              );
+            }
+            return null;
+          })}
+        </div>
+      ))}
+      <form onSubmit={handleSubmit}>
+        <input
+          value={input}
+          onChange={handleInputChange}
+          placeholder="Type a message..."
+        />
+      </form>
+    </div>
+  );
+}
+```
+
+</Tab>
+
+</Tabs>

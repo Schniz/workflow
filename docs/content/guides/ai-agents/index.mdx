@@ -104,7 +104,7 @@ export async function POST(req: Request) {
 
 Let's take a moment to see what we're working with. Run the app with `npm run dev` and open [http://localhost:3000](http://localhost:3000) in your browser. You should see a simple chat interface to play with. Go ahead and give it a try.
 
-The core code that makes all of this happen is quite simple. Here's a breakdown of the main parts:
+The core code that makes all of this happen is quite simple. Here's a breakdown of the main parts. Note that there's no changes needed here, we're simply taking a look at the code to understand what's happening.
 
 <Tabs items={['API Route', 'Tools', 'Client']}>
 
@@ -208,6 +208,8 @@ export default function ChatPage() {
 
 ## Integrating Workflow DevKit
 
+Now that we have a basic agent using AI SDK, we can modify it to make it durable.
+
 <Steps>
 <Step>
 
@@ -237,9 +239,9 @@ export default withWorkflow(nextConfig);
 <Step>
 ### Create a Workflow Function
 
-Move the agent logic into a separate workflow function:
+Move the agent logic into a separate function, which will serve as our workflow definition.
 
-```typescript title="app/api/chat/workflow.ts" lineNumbers
+```typescript title="workflows/chat/workflow.ts" lineNumbers
 import { DurableAgent } from '@workflow/ai/agent'; // [!code highlight]
 import { getWritable } from 'workflow'; // [!code highlight]
 import { stepCountIs } from 'ai';
@@ -273,27 +275,27 @@ export async function chatWorkflow({
 
 Key changes:
 
-- Replace `Agent` with [`DurableAgent`](/docs/api-reference/workflow-ai/durable-agent) from `@workflow/ai/agent`
-- Add the `"use workflow"` directive to mark this as a workflow function
-- Use [`getWritable()`](/docs/api-reference/workflow/get-writable) to get a stream for agent output
-- Pass the `writable` to `agent.stream()` instead of returning a stream directly
+- Add the `"use workflow"` directive to mark our Agent as a workflow function
+- Replaced `Agent` with [`DurableAgent`](/docs/api-reference/workflow-ai/durable-agent) from `@workflow/ai/agent`. This ensures that all calls to the LLM are executed as "steps", and results are aggregated within the workflow context (see [Workflows and Steps](/docs/foundations/workflows-and-steps) for more details on how workflows/steps are defined).
+- Use [`getWritable()`](/docs/api-reference/workflow/get-writable) to get a stream for agent output. This stream is persistent, and API endpoints can read from a run's stream at any time.
 </Step>
 
 <Step>
 ### Update the API Route
 
-Replace the agent call with [`start()`](/docs/api-reference/workflow-api/start) to run the workflow:
+Remove the agent call that we just extracted, and replace it with a call to `start()` to run the workflow:
 
 ```typescript title="app/api/chat/route.ts" lineNumbers
-import { createUIMessageStreamResponse, convertToModelMessages } from 'ai';
-import { start } from 'workflow/api'; // [!code highlight]
-import { chatWorkflow } from './workflow'; // [!code highlight]
+import type { UIMessage } from 'ai';
+import { convertToModelMessages, createUIMessageStreamResponse } from 'ai';
+import { start } from 'workflow/api';
+import { chatWorkflow } from '@/workflows/chat/workflow';
 
 export async function POST(req: Request) {
-  const { messages, modelId } = await req.json();
+  const { messages }: { messages: UIMessage[] } = await req.json();
   const modelMessages = convertToModelMessages(messages);
 
-  const run = await start(chatWorkflow, [{ messages: modelMessages, modelId }]); // [!code highlight]
+  const run = await start(chatWorkflow, [modelMessages]); // [!code highlight]
 
   return createUIMessageStreamResponse({
     stream: run.readable, // [!code highlight]
@@ -301,150 +303,68 @@ export async function POST(req: Request) {
 }
 ```
 
+Key changes:
+
+- Call `start()` to run the workflow function. This returns a `Run` object, which contains the run ID and the readable stream (see [Starting Workflows](/docs/foundations/starting-workflows) for more details on the `Run` object).
+- Pass the `writable` to `agent.stream()` instead of returning a stream directly, ensuring all the Agent output is written to to the run's stream.
+
 </Step>
 
 <Step>
 ### Convert Tools to Steps
 
-Mark tool execution functions with `"use step"` to make them durable. This enables automatic retries and observability:
+Mark all tool definitions with `"use step"` to make them durable. This enables automatic retries and observability for each tool call:
 
 ```typescript title="ai/tools/search-web.ts" lineNumbers
-import { tool } from 'ai';
-import { z } from 'zod';
+// ...
 
-async function executeSearch({ query }: { query: string }) {
+export async function searchFlights(
+  // ... arguments
+) {
   'use step'; // [!code highlight]
 
-  const response = await fetch(`https://api.search.com?q=${query}`);
-  return response.json();
+  // ... rest of the tool code
 }
 
-export const searchWeb = tool({
-  description: 'Search the web for information',
-  inputSchema: z.object({ query: z.string() }),
-  execute: executeSearch,
-});
+export async function checkFlightStatus(
+  // ... arguments
+) {
+  'use step'; // [!code highlight]
+
+  // ... rest of the tool code
+}
+
+export async function getAirportInfo(
+  // ... arguments
+) {
+  'use step'; // [!code highlight]
+
+  // ... rest of the tool code
+}
+
+export async function bookFlight({
+  // ... arguments
+}) {
+  'use step'; // [!code highlight]
+
+  // ... rest of the tool code
+}
+
+export async function checkBaggageAllowance(
+  // ... arguments
+) {
+    'use step'; // [!code highlight]
+
+    // ... rest of the tool code
+  }
+}
 ```
 
 With `"use step"`:
 
-- The tool execution runs in a separate step with full Node.js access
-- Failed tool calls are automatically retried (up to 3 times by default)
-- Each tool execution appears as a discrete step in observability tools
-- Results are persisted, so replays skip already-completed tools
-</Step>
-
-<Step>
-### Stream Progress Updates from Tools
-
-Tools can emit progress updates to the same stream the agent uses. This allows the UI to display tool status.
-
-<Tabs items={['Tool', 'Client']}>
-
-<Tab value="Tool">
-
-```typescript title="ai/tools/search-web.ts" lineNumbers
-import { tool } from 'ai';
-import { getWritable } from 'workflow';
-import { z } from 'zod';
-import type { UIMessageChunk } from 'ai';
-
-async function executeSearch(
-  { url }: { url: string },
-  { toolCallId }: { toolCallId: string }
-) {
-  'use step';
-
-  const writable = getWritable<UIMessageChunk>(); // [!code highlight]
-  const writer = writable.getWriter(); // [!code highlight]
-
-  // Emit a progress update // [!code highlight]
-  await writer.write({ // [!code highlight]
-    id: toolCallId, // [!code highlight]
-    type: 'data-search-web', // [!code highlight]
-    data: { url, status: 'fetching' }, // [!code highlight]
-  }); // [!code highlight]
-
-  const response = await fetch(url);
-  const content = await response.text();
-
-  await writer.write({ // [!code highlight]
-    id: toolCallId, // [!code highlight]
-    type: 'data-search-web', // [!code highlight]
-    data: { url, status: 'done' }, // [!code highlight]
-  }); // [!code highlight]
-
-  writer.releaseLock(); // [!code highlight]
-
-  return content;
-}
-
-export const searchWeb = tool({
-  description: 'Read a web page and return the content',
-  inputSchema: z.object({ url: z.string() }),
-  execute: executeSearch,
-});
-```
-
-</Tab>
-
-<Tab value="Client">
-
-Handle the `data-search-web` chunks in your client to display progress. Data parts are stored in the message, so you can find the latest status directly:
-
-```typescript title="app/chat.tsx" lineNumbers
-'use client';
-
-import { useChat } from '@ai-sdk/react';
-
-export function Chat() {
-  const { messages, input, handleInputChange, handleSubmit } = useChat({
-    api: '/api/chat',
-  });
-
-  return (
-    <div>
-      {messages.map((m) => (
-        <div key={m.id}>
-          <strong>{m.role}:</strong>
-          {m.parts.map((part, i) => {
-            if (part.type === 'text') {
-              return <span key={i}>{part.text}</span>;
-            }
-            if (part.type === 'tool-invocation') {
-              // Find the latest data part for this tool call // [!code highlight]
-              const dataPart = m.parts.findLast( // [!code highlight]
-                (p) => p.type === 'data' && p.id === part.toolInvocation.toolCallId // [!code highlight]
-              ); // [!code highlight]
-              const status = dataPart?.type === 'data' ? dataPart.data : null; // [!code highlight]
-              return (
-                <div key={i}>
-                  {status?.status === 'fetching' // [!code highlight]
-                    ? `Fetching ${status.url}...` // [!code highlight]
-                    : `Called ${part.toolInvocation.toolName}`} // [!code highlight]
-                </div>
-              );
-            }
-            return null;
-          })}
-        </div>
-      ))}
-      <form onSubmit={handleSubmit}>
-        <input
-          value={input}
-          onChange={handleInputChange}
-          placeholder="Type a message..."
-        />
-      </form>
-    </div>
-  );
-}
-```
-
-</Tab>
-
-</Tabs>
-
+- The tool execution runs in a separate step with full Node.js access. In production, each step is executed in a separate worker process, which scales automatically with your workload.
+- Failed tool calls are automatically retried (up to 3 times by default). See [Errors and Retries](/docs/foundations/errors-and-retries) for more details.
+- Each tool execution appears as a discrete step in observability tools. See [Observability](/docs/observability) for more details.
 </Step>
 
 </Steps>
