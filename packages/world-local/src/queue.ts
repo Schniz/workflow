@@ -1,11 +1,11 @@
 import { setTimeout } from 'node:timers/promises';
 import { JsonTransport } from '@vercel/queue';
 import { MessageId, type Queue, ValidQueueName } from '@workflow/world';
+import { Sema } from 'async-sema';
 import { monotonicFactory } from 'ulid';
 import { Agent } from 'undici';
 import z from 'zod';
 import type { Config } from './config.js';
-import { Sema } from 'async-sema';
 import { resolveBaseUrl } from './config.js';
 
 // For local queue, there is no technical limit on the message visibility lifespan,
@@ -112,7 +112,7 @@ export function createQueue(config: Partial<Config>): Queue {
             } catch {}
           }
 
-          console.error(`[embedded world] Failed to queue message`, {
+          console.error(`[local world] Failed to queue message`, {
             queueName,
             text,
             status: response.status,
@@ -122,7 +122,7 @@ export function createQueue(config: Partial<Config>): Queue {
         }
 
         console.error(
-          `[embedded world] Reached max retries of embedded world queue implementation`
+          `[local world] Reached max retries of local world queue implementation`
         );
       } finally {
         semaphore.release();
